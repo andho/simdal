@@ -8,7 +8,7 @@
  *
  */
 
-class Domain_Entity {
+class SimDAL_Entity {
 
 	/**
 	 * Array of validators that will be used to validate the data in the 
