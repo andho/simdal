@@ -1,6 +1,6 @@
 <?php
 
-class Custom_Domain_Repository {
+class SimDAL_Repository {
 
 	protected $_dao = null;
 	

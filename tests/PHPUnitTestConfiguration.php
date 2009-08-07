@@ -3,19 +3,19 @@
 $projectDir = realpath( dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' ) . DIRECTORY_SEPARATOR;
 
 $simdal_root = $projectDir . 'library';
-$phpspec_root = $projectDir . '..' . DIRECTORY_SEPARATOR . 'PHPSpec';
-$mockery_root = $projectDir . '..' . DIRECTORY_SEPARATOR . 'Mockery';
+$test_project = $projectDir . 'tests' . DIRECTORY_SEPARATOR . 'TestSample';
+$phpunit_root = $projectDir . '..' . DIRECTORY_SEPARATOR . 'library' . DIRECTORY_SEPARATOR . 'PHPUnit';
+
 
 $paths = array(
 	'SimDAL'=>$simdal_root,
-	'PHPSpec'=>$phpspec_root,
-	'Mockery'=>$mockery_root
+	'TestProject'=>$test_project,
+	'PHPUnit'=>$phpunit_root
 );
 
-set_include_path( implode( PATH_SEPARATOR, $paths ) . PATH_SEPARATOR . get_include_path() );
+require_once 'PHPUnit/Framework.php';
 
-require_once 'PHPSpec.php';
-require_once 'Mockery/Framework.php';
+set_include_path( implode( PATH_SEPARATOR, $paths ) . PATH_SEPARATOR . get_include_path() );
 
 class Custom_Autoload
 {

@@ -9,6 +9,8 @@
  */
 
 class SimDAL_Entity {
+	
+	protected static $_defaultEntityManager = null;
 
 	/**
 	 * Array of validators that will be used to validate the data in the 
@@ -33,11 +35,11 @@ class SimDAL_Entity {
 	protected $_filters = array();
 	
 	/**
-	 * Repository class which should be injected when instantiating the object
+	 * Manager object which should be injected when instantiating the object
 	 *
-	 * @var Domain_Repository
+	 * @var SimDAL_Entity_Manager
 	 */
-	protected $_repository;
+	protected $_entityManager;
 	
 	/**
 	 * Array containing the data of the entity
@@ -92,6 +94,14 @@ class SimDAL_Entity {
 	 */
 	protected $_relations = array();
 	
+	static public function setDefaultEntityManager(SimDAL_Entity_ManagerInterface $manager) {
+		self::$_defaultEntityManager = $manager;
+	}
+	
+	static public function reset() {
+		self::$_defaultEntityManager = null;
+	}
+	
 	/**
 	 * Enables the following magic methods
 	 * * get<Property> which will return the entity which corresponds to the
@@ -103,33 +113,32 @@ class SimDAL_Entity {
 	 */
 	public function __call($name, $arguments) {
 		if (preg_match('/^get(.*)$/', $name, $matches)) {
-			$key = strtolower($matches[1]); // @todo should convert from CamelCase to underscore
-			if (isset($this->_relations[$key])) {
-				return $this->_getPropertyEntity($key);
+			
+			if ( !array_key_exists( strtolower( $matches[1] ), $this->_data ) ) {
+				require_once 'SimDAL/Entity/NonExistentMutatorException.php';
+				throw new SimDAL_Entity_NonExistentMutatorException();
 			}
-		}
-	}
-	
-	/**
-	 * Returns the Entity of type specified in $entity which correponds
-	 * to the id in the appropriate value in the _data property of the
-	 * object
-	 *
-	 * @param string $entity
-	 * @return Domain_Entity
-	 */
-	protected function _getPropertyEntity($entity) {
-		$key = $entity;
-		
-		if ($this->_data[$key] === null) {
-			return null;
+			
+			$key = strtolower($matches[1]); // @todo should convert from CamelCase to underscore
+			
+			// @todo cater for other kinds of entity relationships
+			//if ($this->_entityManager->hasRelation($key) && $this->_entityManager->getRelation($key)->getType() != 'one-to-many') {
+				
+			//}
+			
+			return $this->$key;
 		}
 		
-		$repo = new $this->_relations[$key]();
-		$entity = $repo->getById($this->_data[$entity]);
-		$this->_injected[$key] = $entity;
-		
-		return $this->_injected[$key];
+		if (preg_match('/^set(.*)$/', $name, $matches)) {
+			
+			if ( !array_key_exists( strtolower( $matches[1] ), $this->_data ) ) {
+				require_once 'SimDAL/Entity/NonExistentMutatorException.php';
+				throw new SimDAL_Entity_NonExistentMutatorException();
+			}
+			
+			$key = strtolower($matches[1]); // @todo should convert from CamelCase to underscore
+			$this->$key = $arguments[0];
+		}
 	}
 	
 	/**
@@ -140,7 +149,7 @@ class SimDAL_Entity {
 	 * should be the data
 	 * @param Domain_Repository|null $repository
 	 */
-	public function __construct($data=null, $repository=null) {
+	public function __construct($data=null, $manager=null) {
 		$options = array();
 		
 		if ($data !== null && isset($data['data'])) {
@@ -158,18 +167,16 @@ class SimDAL_Entity {
 			throw new Domain_Entity_InvalidDataException("The data provided is not an array");
 		}
 		
-		if ($repository instanceof Domain_Repository ) {
-			$this->_repository = $repository;
+		if ($manager !== null ) {
+			$this->_entityManager = $manager;
+		} else if (isset($options['manager'])) {
+			$this->_entityManager = $options['manager'];
+		} else if ( self::$_defaultEntityManager !== null ) {
+			$this->_entityManager = self::$_defaultEntityManager;
 		}
-		if ($this->_repository === null && isset($options['repository'])) {
-			$this->_repository = $options['repository'];
-		}
-		if (is_string($this->_repository) && class_exists($this->_repository)) {
-			$repo = new $this->_repository();
-			if (!$repo instanceof Domain_Repository ) {
-				throw new Exception("Repository in protected property '_repository' should be of tipe Domain_Repository");
-			}
-			$this->_repository = $repo;
+		
+		if ( !$this->_entityManager instanceof SimDAL_Entity_ManagerInterface ) {
+			throw new SimDAL_Entity_NoEntityManagerException();
 		}
 	}
 	
@@ -223,9 +230,28 @@ class SimDAL_Entity {
 		return $this->_data;
 	}
 	
+	/**
+	 * Returns the name of the Entity extracted from the Class name
+	 *
+	 * @return string The name of the entity extracted from the Class name
+	 */
+	public function getEntityName() {
+		$class = get_class($this);
+		
+		return $class;
+	}
+	
 	public function __get($name) {
+		
 		if (!isset($this->_data[$name])) {
 			return null;
+		}
+		
+		$entityClass = $this->getEntityName();
+		
+		if ($this->_entityManager->hasRelation($name, $entityClass)) {
+			$method = 'get'.ucfirst($name).'ById';
+			return $this->_entityManager->{$method}($this->_data[$name]);
 		}
 		
 		return $this->_data[$name];
@@ -281,6 +307,15 @@ class SimDAL_Entity {
 		if (isset($this->_data[$name])) {
 			unset($this->_data[$name]);
 		}
+	}
+	
+	/**
+	 * Returns the current Entity Manager of the entity
+	 * 
+	 * @return SimDAL_Entity_ManagerInterface
+	 */
+	public function getEntityManager() {
+		return $this->_entityManager;
 	}
 	
 	/**

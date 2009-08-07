@@ -1,8 +1,14 @@
 <?php
 
-require_once ('SimDAL/Entity.php');
-require_once ('SimDAL/Entity/NoRepositoryException.php');
+//require_once ('library/SimDAL/Entity.php');
+//require_once ('library/SimDAL/Entity/NoEntityManagerException.php');
 
-class Project extends SimDAL_Entity {
+class TestSample_Project extends SimDAL_Entity {
+	
+	protected $_data = array(
+		'name'=>null,
+		'description'=>null,
+		'type'=>null
+	);
 	
 }
