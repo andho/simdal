@@ -1,6 +1,6 @@
 <?php
 
-class TestSample_Type extends SimDAL_Entity {
+class TestDomain_Type extends SimDAL_Entity {
 	
 	protected $_data = array(
 		'id'=>null,

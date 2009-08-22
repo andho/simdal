@@ -1,6 +1,6 @@
 <?php
 
-//require_once 'tests/TestSample/Project.php';
+//require_once 'tests/TestDomain/Project.php';
 
 require_once '../PHPUnitTestConfiguration.php';
 
@@ -15,9 +15,9 @@ class ProjectTest extends PHPUnit_Framework_TestCase {
 	private $_manager;
 	
 	protected function setUp() {
-		$this->_manager = $this->getMock('SimDAL_Entity_ManagerInterface');
+		$this->_manager = $this->getMock('SimDAL_Entity_Manager');
 		SimDAL_Entity::setDefaultEntityManager( $this->_manager );
-		$this->_project = new TestSample_Project(array(), $this->_manager);
+		$this->_project = new TestDomain_Project(array(), $this->_manager);
 	}
 	
 	protected function tearDown() {
@@ -29,7 +29,7 @@ class ProjectTest extends PHPUnit_Framework_TestCase {
 		SimDAL_Entity::reset();
 		
 		$this->setExpectedException('SimDAL_Entity_NoEntityManagerException');
-		$project = new TestSample_Project();
+		$project = new TestDomain_Project();
 	}
 	
 	public function itShouldUseSetDefaultManagerWhenNoEntityManagerIsPassedToTheConstructor() {

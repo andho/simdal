@@ -250,8 +250,7 @@ class SimDAL_Entity {
 		$entityClass = $this->getEntityName();
 		
 		if ($this->_entityManager->hasRelation($name, $entityClass)) {
-			$method = 'get'.ucfirst($name).'ById';
-			return $this->_entityManager->{$method}($this->_data[$name]);
+			return $this->_entityManager->getBy($this->_data[$name], $name);
 		}
 		
 		return $this->_data[$name];

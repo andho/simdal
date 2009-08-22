@@ -10,7 +10,7 @@ class DescribeNewProject extends PHPSpec_Context {
 	public function before() {
 		$this->_manager = mockery('SimDAL_Entity_ManagerInterface');
 		SimDAL_Entity::setDefaultEntityManager( $this->_manager );
-		$this->_project = new TestSample_Project(array(), $this->_manager);
+		$this->_project = new TestDomain_Project(array(), $this->_manager);
 	}
 	
 	public function after() {
@@ -22,27 +22,27 @@ class DescribeNewProject extends PHPSpec_Context {
 	public function itShouldThrowNoManagerExceptionIfNoEntityManagerIsPassedToTheConstructorWhenThereIsNoDefaultManagerSet() {
 		SimDAL_Entity::reset();
 		
-		$this->spec('TestSample_Project', array())->should->throw('SimDAL_Entity_NoEntityManagerException');
+		$this->spec('TestDomain_Project', array())->should->throw('SimDAL_Entity_NoEntityManagerException');
 	}
 	
 	public function itShouldUseSetDefaultManagerWhenNoEntityManagerIsPassedToTheConstructor() {
-		$project = new TestSample_Project();
+		$project = new TestDomain_Project();
 		
 		$this->spec($project->getEntityManager())->should->equal($this->_manager);
 	}
 	
 	public function itShouldUseTheEntityManagerPassedToTheConstructor() {
 		$manager = mockery('SimDAL_Entity_ManagerInterface');
-		$project = new TestSample_Project(array(), $manager);
+		$project = new TestDomain_Project(array(), $manager);
 		
 		$this->spec($project->getEntityManager())->should->equal($manager);
 	}
 	
 	public function itShouldAutomaticallyHaveMutatorsForItsProperties() {
-		$this->_manager->shouldReceive('hasRelation')->once()->with('name', 'TestSample_Project')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('description', 'TestSample_Project')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestSample_Project')->andReturn( true );
-		$this->_manager->shouldReceive('getTypeById')->once()->with(1)->andReturn( new SimDAL_Entity() );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('name', 'TestDomain_Project')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('description', 'TestDomain_Project')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Project')->andReturn( true );
+		$this->_manager->shouldReceive('getBy')->once()->with(1, 'type')->andReturn( new SimDAL_Entity() );
 		
 		$this->_project->setName( "Spec Ops" );
 		$this->_project->setDescription( "Lightweight application for project analysis" );
@@ -65,12 +65,12 @@ class DescribeNewProject extends PHPSpec_Context {
 	}
 	
 	public function itShouldGetRelatedEntityWhenTheRespectivePropertyIsCalledFor() {
-		$type = new TestSample_Type(array('id'=>1, 'type'=>'the type'));
+		$type = new TestDomain_Type(array('id'=>1, 'type'=>'the type'));
 		
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestSample_Project')->andReturn( true );
-		$this->_manager->shouldReceive('getTypeById')->once()->with(1)->andReturn( $type );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('id', 'TestSample_Type')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestSample_Type')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Project')->andReturn( true );
+		$this->_manager->shouldReceive('getBy')->once()->with(1, 'type')->andReturn( $type );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('id', 'TestDomain_Type')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Type')->andReturn( false );
 		
 		$this->_project->setType( 1 );
 		

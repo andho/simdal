@@ -2,10 +2,10 @@
 
 interface SimDAL_Entity_ManagerInterface {
 	
-	public function __cal();
+	static public function getInstance();
 	
-	public function hasRelation();
+	public function hasRelation($dependent, $parent);
 	
-	public function getTypeById();
+	public function getBy($property, $entity);
 	
 }
