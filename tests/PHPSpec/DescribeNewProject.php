@@ -39,18 +39,18 @@ class DescribeNewProject extends PHPSpec_Context {
 	}
 	
 	public function itShouldAutomaticallyHaveMutatorsForItsProperties() {
-		$this->_manager->shouldReceive('hasRelation')->once()->with('name', 'TestDomain_Project')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('description', 'TestDomain_Project')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Project')->andReturn( true );
-		$this->_manager->shouldReceive('getBy')->once()->with(1, 'type')->andReturn( new SimDAL_Entity() );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('Name', 'TestDomain_Project')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('Description', 'TestDomain_Project')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('TypeId', 'TestDomain_Project')->andReturn( false );
+		//$this->_manager->shouldReceive('getBy')->once()->with(1, 'type')->andReturn( new SimDAL_Entity() );
 		
 		$this->_project->setName( "Spec Ops" );
 		$this->_project->setDescription( "Lightweight application for project analysis" );
-		$this->_project->setType( 1 );
+		$this->_project->setTypeId( 1 );
 
 		$this->spec($this->_project->getName())->should->equal("Spec Ops");
 		$this->spec($this->_project->getDescription())->should->equal("Lightweight application for project analysis");
-		$this->spec($this->_project->getType())->should->beAnInstanceOf("SimDAL_Entity");
+		$this->spec($this->_project->getTypeId())->should->equal(1);
 		
 		mockery_verify();
 	}
@@ -64,15 +64,15 @@ class DescribeNewProject extends PHPSpec_Context {
 			->should->throw('SimDAL_Entity_NonExistentMutatorException');
 	}
 	
-	public function itShouldGetRelatedEntityWhenTheRespectivePropertyIsCalledFor() {
+	public function itShouldGetTheRelationIfItIsDefined() {
 		$type = new TestDomain_Type(array('id'=>1, 'type'=>'the type'));
 		
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Project')->andReturn( true );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('Type', 'TestDomain_Project')->andReturn( true );
 		$this->_manager->shouldReceive('getBy')->once()->with(1, 'type')->andReturn( $type );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('id', 'TestDomain_Type')->andReturn( false );
-		$this->_manager->shouldReceive('hasRelation')->once()->with('type', 'TestDomain_Type')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('Id', 'TestDomain_Type')->andReturn( false );
+		$this->_manager->shouldReceive('hasRelation')->once()->with('Type', 'TestDomain_Type')->andReturn( false );
 		
-		$this->_project->setType( 1 );
+		$this->_project->setTypeId( 1 );
 		
 		$rType = $this->_project->getType();
 		

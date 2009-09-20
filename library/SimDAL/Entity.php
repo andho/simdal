@@ -85,14 +85,11 @@ class SimDAL_Entity {
 	protected $_restrict = true;
 	
 	/**
-	 * An Array of relationships of the entity
-	 * Each array key corresponds to a property and the value is the
-	 * name of the Repository class (which corresponds to the entity class)
-	 * for that property
+	 * SimDAL_Entity_RelationCollection object
 	 *
-	 * @var array
+	 * @var SimDAL_Entity_RelationCollection
 	 */
-	protected $_relations = array();
+	protected $_relations = null;
 	
 	static public function setDefaultEntityManager(SimDAL_Entity_ManagerInterface $manager) {
 		self::$_defaultEntityManager = $manager;
@@ -114,12 +111,12 @@ class SimDAL_Entity {
 	public function __call($name, $arguments) {
 		if (preg_match('/^get(.*)$/', $name, $matches)) {
 			
-			if ( !array_key_exists( strtolower( $matches[1] ), $this->_data ) ) {
+			$key = $matches[1];
+			
+			if ( !array_key_exists( $key, $this->_data ) && !$this->_relations->hasRelation( $key ) ) {
 				require_once 'SimDAL/Entity/NonExistentMutatorException.php';
 				throw new SimDAL_Entity_NonExistentMutatorException();
 			}
-			
-			$key = strtolower($matches[1]); // @todo should convert from CamelCase to underscore
 			
 			// @todo cater for other kinds of entity relationships
 			//if ($this->_entityManager->hasRelation($key) && $this->_entityManager->getRelation($key)->getType() != 'one-to-many') {
@@ -131,12 +128,13 @@ class SimDAL_Entity {
 		
 		if (preg_match('/^set(.*)$/', $name, $matches)) {
 			
-			if ( !array_key_exists( strtolower( $matches[1] ), $this->_data ) ) {
+			$key = $matches[1];
+			
+			if ( !array_key_exists( $key, $this->_data ) ) {
 				require_once 'SimDAL/Entity/NonExistentMutatorException.php';
 				throw new SimDAL_Entity_NonExistentMutatorException();
 			}
 			
-			$key = strtolower($matches[1]); // @todo should convert from CamelCase to underscore
 			$this->$key = $arguments[0];
 		}
 	}
@@ -177,6 +175,18 @@ class SimDAL_Entity {
 		
 		if ( !$this->_entityManager instanceof SimDAL_Entity_ManagerInterface ) {
 			throw new SimDAL_Entity_NoEntityManagerException();
+		}
+		
+		if ( !isset($options['relations'])) {
+			$this->_relations = new SimDAL_Entity_RelationCollection();
+		} else if ($options['relations'] instanceof SimDAL_Entity_RelationCollection) {
+			throw new SimDAL_Entity_RelationsObjectIsInvalid();
+		} else {
+			$this->_relations = $options['relations'];
+		}
+		
+		if (method_exists($this, 'init')) {
+			$this->init();
 		}
 	}
 	
