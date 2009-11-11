@@ -1,44 +1,130 @@
 <?php
 
 class SimDAL_Repository {
-
-	protected $_dao = null;
 	
-	public function __construct($dao = null) {
-		if ($dao !== null && !$dao instanceof Zend_Db_Table) {
-			throw new Exception("Argument 'dao' should be of type Zend_Db_Table");
-		} else if ($dao instanceof Zend_Db_Table) {
-			$this->_dao = $dao;
-			return;
-		}
-		
-		if (!is_string($this->_dao) || !class_exists($this->_dao)) {
-			throw new Exception("property '_dao' should be a name of or an object of Zend_Db_Table");
-		}
-		
-		if (is_string($this->_dao)) {
-			$class = $this->_dao;
-			$dao = new $class();
-			if (!$dao instanceof Zend_Db_Table_Abstract) {
-				throw new Exception("class name in property '_dao' is not of type Zend_Db_Table_Abstract");
-			}
-			$this->_dao = $dao;
+	static protected $_defaultAdapter = null;
+	
+	protected $_adapter = null;
+	
+	protected $_table = null;
+	
+	protected $_class = 'TestDomain_Project';
+	
+	protected $_new = array();
+	
+	protected $_loaded = array();
+	
+	protected $_delete = array();
+	
+	protected $_cleanData = array();
+	
+	public function __construct($adapter=null) {
+		if ($adapter instanceof SimDAL_Persistence_AdapterInterface) {
+			$this->_adapter = $adapter;
+		} else if (self::$_defaultAdapter instanceof SimDAL_Persistence_AdapterInterface) {
+			$this->_adapter = self::$_defaultAdapter;
+		} else {
+			throw new Simdal_PersistenceAdapterIsNotSetException();
 		}
 	}
 	
-	public function save($entity) {
-		if ($entity->id === null) {
-			$row = $this->_dao->fetchNew();
-		} else {
-			$row = $this->_dao->find($entity->id)->current();
+	public function add($entity) {
+		if (in_array($entity, $this->_new) ) {
+			return false;
 		}
 		
-		$row->setFromArray($entity->toArray());
-		$row->save();
+		$this->_new[] = $entity;
 		
-		$entity->setFromArray($row->toArray());
+		return true;
+	}
+	
+	public function delete($entity) {
+		if (is_object($entity)) {
+			$this->_delete[] = $entity->id;
+		} else {
+			$this->_delete[] = $entity;
+		}
+	}
+	
+	public function getNew() {
+		return $this->_new;
+	}
+	
+	public function findById($id) {
+		$entity = $this->_getFromLoaded($id);
+		if (!is_null($entity)) {
+			$this->_loaded[$entity->id] = $entity;
+			return $entity;
+		}
+		
+		$array = $this->_adapter->findById($this->_table, $id);
+		if (is_null($array)) {
+			return null;
+		}
+		
+		$class = $this->_class;
+		
+		$entity = new $class();
+		foreach ($array as $key=>$value) {
+			$entity->$key = $value;
+		}
+		
+		$this->_loaded[$entity->id] = $entity;
+		$this->_cleanData[$array['id']] = $array;
 		
 		return $entity;
+	}
+	
+	protected function _getFromLoaded($id) {
+		if ($this->_isLoaded($id)) {
+			return $this->_loaded[$id];
+		}
+		
+		return null;
+	}
+	
+	protected function _isLoaded($id) {
+		if (!array_key_exists($id, $this->_loaded)) {
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public function getChanges() {
+		$array = array();
+		
+		foreach ($this->_loaded as $id=>$obj) {
+			if (!array_key_exists($id, $this->_cleanData)) {
+				continue;
+			}
+			
+			foreach ($this->_cleanData[$id] as $key=>$value) {
+				if ($value !== $obj->$key) {
+					$array[$id][$key] = $obj->$key;
+				}
+			}
+		}
+		
+		return $array;
+	}
+	
+	public function getDeleted() {
+		return $this->_delete;
+	}
+	
+	public function revert($entity) {
+		if (array_key_exists($entity->id, $this->_delete)) {
+			unset($this->_delete[$entity->id]);
+		}
+		
+		if (!array_key_exists($entity->id, $this->_cleanData)) {
+			return;
+		}
+		
+		foreach ($this->_cleanData[$entity->id] as $key=>$value) {
+			$entity->$key = $value;
+		}
 	}
 	
 }

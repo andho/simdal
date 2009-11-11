@@ -1,9 +1,7 @@
 <?php
 
-class TestDomain_ProjectRepository {
+class TestDomain_ProjectRepository extends SimDAL_Repository {
 	
-	public function save() {
-		
-	}
+	protected $_table = 'project';
 	
 }
