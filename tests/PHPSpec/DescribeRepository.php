@@ -41,7 +41,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldLoadUnloadedEntityFromAdapterWhenFindingById() {
-		$this->adapter->shouldReceive('findById')->with('project', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
 		
 		$prj = new TestDomain_Project();
 		$prj->id = 1;
@@ -54,7 +54,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldLoadLoadedEntityFromHashWhenFindingById() {
-		$this->adapter->shouldReceive('findById')->with('project', 1)->andReturn($this->storage['projects']['1'])->ordered();
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1'])->ordered();
 		
 		$project = $this->repo->findById(1);
 		
@@ -64,7 +64,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldOnlySendChangedFieldsToUpdate() {
-		$this->adapter->shouldReceive('findById')->with('project', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		$project->description = 'changed';
@@ -75,7 +75,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldSetEntityForRemovalWhenEntityIsPassedToDeleteMethod() {
-		$this->adapter->shouldReceive('findById')->with('project', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		
@@ -83,7 +83,7 @@ class DescribeRepository extends PHPSpec_Context {
 		
 		$result = $this->repo->getDeleted();
 		
-		$this->spec($result)->should->equal(array(1));
+		$this->spec($result)->should->equal(array(1=>1));
 	}
 	
 	public function itShouldSetEntityForRemovalWhenEntityIdIsPassedToDeleteMethod() {
@@ -91,11 +91,11 @@ class DescribeRepository extends PHPSpec_Context {
 		
 		$result = $this->repo->getDeleted();
 		
-		$this->spec($result)->should->equal(array(1));
+		$this->spec($result)->should->equal(array(1=>1));
 	}
 	
 	public function itShouldRevertEntityToItsOriginalValues() {
-		$this->adapter->shouldReceive('findById')->with('project', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		
@@ -106,6 +106,64 @@ class DescribeRepository extends PHPSpec_Context {
 		$result = $this->repo->getChanges();
 		
 		$this->spec($result)->should->be(array());
+	}
+	
+	public function itShouldSaveEntityIntoPersistentStorageWhenCommited() {
+		$data = array(
+			'id' => null,
+			'name' => 'Project',
+			'description' => 'This is a test project'
+		);
+		$this->adapter->shouldReceive('insert')->with('projects', $data)->andReturn(1);
+		
+		$project = new TestDomain_Project();
+		$project->name = 'Project';
+		$project->description = 'This is a test project';
+		
+		$this->repo->add($project);
+		
+		$this->repo->commit();
+		
+		$this->spec($project->id)->should->equal(1);
+	}
+	
+	public function itShouldSaveChangesToEntitiesInPersistentStorageWhenCommited() {
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects'][1]);
+		$this->adapter->shouldReceive('update')->with('projects', array('description'=>'changed'), 1)->andReturn(1);
+		
+		$project = $this->repo->findById(1);
+		$project->description = 'changed';
+		
+		$this->repo->commit();
+		
+		$this->spec($this->repo->getChanges())->should->be(array());
+	}
+	
+	public function itShouldDeleteEntitiesMarkedForDeletionFromPersistentStorageWhenCommited() {
+		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects'][1]);
+		$this->adapter->shouldReceive('delete')->with('projects', 1)->andReturn(1);
+		
+		$project = $this->repo->findById(1);
+		$this->repo->delete($project);
+		$this->repo->commit();
+		
+		$this->spec($this->repo->getDeleted())->should->be(array());
+	}
+	
+	public function itShouldSaveChangesToEntitySetsThroughEntitySetCommandsInOneQueryToStorage() {
+		$this->pending();
+	}
+	
+	public function itShouldLoadEntitySetsBasedOnCriterion() {
+		$this->pending();
+	}
+	
+	public function itShouldBeAbleToUpdateEntireSetsInOneCommand() {
+		$this->pending();
+	}
+	
+	public function itShouldUpdateEntitiesWithoutLoading() {
+		$this->pending();
 	}
 
 }

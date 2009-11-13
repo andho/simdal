@@ -40,9 +40,9 @@ class SimDAL_Repository {
 	
 	public function delete($entity) {
 		if (is_object($entity)) {
-			$this->_delete[] = $entity->id;
+			$this->_delete[$entity->id] = $entity->id;
 		} else {
-			$this->_delete[] = $entity;
+			$this->_delete[$entity] = $entity;
 		}
 	}
 	
@@ -125,6 +125,85 @@ class SimDAL_Repository {
 		foreach ($this->_cleanData[$entity->id] as $key=>$value) {
 			$entity->$key = $value;
 		}
+	}
+	
+	public function commit() {
+		
+		foreach ($this->_delete as $id) {
+			$this->_delete($id);
+		}
+		
+		foreach ($this->_loaded as $entity) {
+			$this->_update($entity);
+		}
+		
+		foreach ($this->_new as $entity) {
+			$this->_insert($entity);
+		}
+	}
+	
+	protected function _insert($entity) {
+		$data = $this->_arrayFromEntity($entity);
+		
+		$id = $this->_adapter->insert($this->_table, $data);
+		
+		$entity->id = $id;
+		$this->_loaded[$entity->id] = $entity;
+		
+		return $id;
+	}
+	
+	protected function _update($entity) {
+		$data = $this->_arrayFromEntityChangesOnly($entity);
+		
+		if (count($data) <= 0) {
+			return;
+		}
+		
+		$this->_adapter->update($this->_table, $data, $entity->id);
+		
+		$this->_updateCleanData($data, $entity->id);
+	}
+	
+	protected function _delete($id) {
+		$rows_affected = $this->_adapter->delete($this->_table, $id);
+		
+		unset($this->_delete[$id]);
+		
+		if (array_key_exists($id, $this->_loaded)) {
+			unset($this->_loaded[$id]);
+			unset($this->_cleanData[$id]);
+		}
+		
+		return $rows_affected;
+	}
+	
+	protected function _updateCleanData($data, $id) {
+		foreach ($data as $key=>$value) {
+			$this->_cleanData[$id][$key] = $value;
+		}
+	}
+	
+	protected function _arrayFromEntity($entity) {
+		$array = array();
+		
+		foreach($entity as $key=>$value) {
+			$array[$key] = $value;
+		}
+		
+		return $array;
+	}
+	
+	protected function _arrayFromEntityChangesOnly($entity) {
+		$array = array();
+		
+		foreach ($this->_cleanData[$entity->id] as $key=>$value) {
+			if ($entity->$key !== $value) {
+				$array[$key] = $entity->$key;
+			}
+		}
+		
+		return $array;
 	}
 	
 }

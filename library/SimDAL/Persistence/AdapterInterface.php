@@ -6,6 +6,8 @@ interface SimDAL_Persistence_AdapterInterface {
 	
 	public function update($table, $data, $id);
 	
+	public function delete($table, $id);
+	
 	public function findById($table, $id);
 	
 }

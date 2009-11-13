@@ -24,7 +24,11 @@ class Custom_Autoload
         //$path = dirname(dirname(__FILE__));
         //include $path . '/' . str_replace('_', '/', $class) . '.php';
         if (preg_match('/^([^ _]*)?(_[^ _]*)*$/', $class, $matches)) {
-        	include str_replace('_', '/', $class) . '.php';
+        	$file = str_replace('_', '/', $class) . '.php';
+        	/*if (!is_file($file)) {
+        		return false;
+        	}*/
+        	@include $file;
         	return true;
         }
         
