@@ -12,12 +12,16 @@ class TestDomain_Project {
 	
 	private $type = null;
 	
-	public function getType() {
+	public function getTestDomain_Type() {
 		return $this->type;
 	}
 	
-	public function setType(TestDomain_Type $type) {
+	public function setTestDomain_Type(TestDomain_Type $type) {
 		$this->type = $type;
+		
+		if (!is_null($type->id)) {
+			$this->typeId = $type->id;
+		}
 	}
 	
 }

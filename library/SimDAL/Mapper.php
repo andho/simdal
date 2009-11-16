@@ -15,4 +15,9 @@ class SimDAL_Mapper {
 	public function getColumnData($class) {
 		return $this->map[$class]['columns'];
 	}
+	
+	public function getManyToOneRelations($class) {
+		
+	}
+	
 }
