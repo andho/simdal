@@ -10,4 +10,6 @@ interface SimDAL_Persistence_AdapterInterface {
 	
 	public function findById($table, $id);
 	
+	public function query($sql);
+	
 }

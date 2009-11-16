@@ -4,9 +4,11 @@ class SimDAL_Repository {
 	
 	static protected $_defaultAdapter = null;
 	
+	static protected $_defaultMapper = null;
+	
 	protected $_adapter = null;
 	
-	protected $_table = null;
+	protected $_mapper = null;
 	
 	protected $_class = 'TestDomain_Project';
 	
@@ -18,13 +20,21 @@ class SimDAL_Repository {
 	
 	protected $_cleanData = array();
 	
-	public function __construct($adapter=null) {
+	public function __construct($adapter=null, $mapper=null) {
 		if ($adapter instanceof SimDAL_Persistence_AdapterInterface) {
 			$this->_adapter = $adapter;
 		} else if (self::$_defaultAdapter instanceof SimDAL_Persistence_AdapterInterface) {
 			$this->_adapter = self::$_defaultAdapter;
 		} else {
 			throw new Simdal_PersistenceAdapterIsNotSetException();
+		}
+		
+		if ($mapper instanceof SimDAL_Mapper) {
+			$this->_mapper = $mapper;
+		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
+			$this->_mapper = self::$_defaultMapper;
+		} else {
+			throw new SimDAL_MapperIsNotSetException();
 		}
 	}
 	
@@ -53,26 +63,40 @@ class SimDAL_Repository {
 	public function findById($id) {
 		$entity = $this->_getFromLoaded($id);
 		if (!is_null($entity)) {
-			$this->_loaded[$entity->id] = $entity;
 			return $entity;
 		}
 		
-		$array = $this->_adapter->findById($this->_table, $id);
+		$array = $this->_adapter->findById($this->_getTable(), $id);
 		if (is_null($array)) {
 			return null;
 		}
 		
 		$class = $this->_class;
 		
-		$entity = new $class();
-		foreach ($array as $key=>$value) {
-			$entity->$key = $value;
-		}
+		$entity = $this->_entityFromArray($array);
 		
 		$this->_loaded[$entity->id] = $entity;
-		$this->_cleanData[$array['id']] = $array;
+		$this->_insertIntoCleanData($entity);
 		
 		return $entity;
+	}
+	
+	public function query($sql) {
+		$rows = $this->_adapter->query($sql);
+		$class = $this->_class;
+		
+		$collection = array();
+		
+		foreach ($rows as $row) {
+			$entity = $this->_entityFromArray($row);
+			
+			$this->_loaded[$entity->id] = $entity;
+			$this->_insertIntoCleanData($entity);
+			
+			$collection[$entity->id] = $entity;
+		}
+		
+		return $collection;
 	}
 	
 	protected function _getFromLoaded($id) {
@@ -128,7 +152,7 @@ class SimDAL_Repository {
 	}
 	
 	public function commit() {
-		
+		// @todo put everythin into a unitofwork
 		foreach ($this->_delete as $id) {
 			$this->_delete($id);
 		}
@@ -143,18 +167,19 @@ class SimDAL_Repository {
 	}
 	
 	protected function _insert($entity) {
-		$data = $this->_arrayFromEntity($entity);
+		$data = $this->_arrayForStorageFromEntity($entity);
 		
 		$id = $this->_adapter->insert($this->_table, $data);
 		
 		$entity->id = $id;
 		$this->_loaded[$entity->id] = $entity;
+		$this->_insertIntoCleanData($entity);
 		
 		return $id;
 	}
 	
 	protected function _update($entity) {
-		$data = $this->_arrayFromEntityChangesOnly($entity);
+		$data = $this->_arrayForStorageFromEntityChangesOnly($entity);
 		
 		if (count($data) <= 0) {
 			return;
@@ -162,7 +187,7 @@ class SimDAL_Repository {
 		
 		$this->_adapter->update($this->_table, $data, $entity->id);
 		
-		$this->_updateCleanData($data, $entity->id);
+		$this->_updateCleanData($entity);
 	}
 	
 	protected function _delete($id) {
@@ -178,32 +203,67 @@ class SimDAL_Repository {
 		return $rows_affected;
 	}
 	
-	protected function _updateCleanData($data, $id) {
-		foreach ($data as $key=>$value) {
+	protected function _insertIntoCleanData($entity) {
+		$data = array();
+		
+		foreach ($entity as $key=>$value) {
+			$data[$key] = $value;
+		}
+		
+		$this->_cleanData[$entity->id] = $data;
+	}
+	
+	protected function _updateCleanData($entity) {
+		$id = $entity->id;
+		foreach ($entity as $key=>$value) {
 			$this->_cleanData[$id][$key] = $value;
 		}
 	}
 	
-	protected function _arrayFromEntity($entity) {
+	protected function _arrayForStorageFromEntity($entity) {
 		$array = array();
 		
-		foreach($entity as $key=>$value) {
-			$array[$key] = $value;
+		foreach($this->_getColumnData() as $key=>$value) {
+			$array[$value[0]] = $entity->$key;
 		}
 		
 		return $array;
 	}
 	
-	protected function _arrayFromEntityChangesOnly($entity) {
+	protected function _arrayForStorageFromEntityChangesOnly($entity) {
 		$array = array();
+		$id = $entity->id;
 		
-		foreach ($this->_cleanData[$entity->id] as $key=>$value) {
-			if ($entity->$key !== $value) {
-				$array[$key] = $entity->$key;
+		foreach ($this->_getColumnData() as $key=>$value) {
+			if ($entity->$key !== $this->_cleanData[$id][$key]) {
+				$array[$value[0]] = $entity->$key;
 			}
 		}
 		
 		return $array;
+	}
+	
+	protected function _entityFromArray($array) {
+		$class = $this->_class;
+		
+		$entity = new $class();
+		foreach ($this->_getColumnData() as $key=>$value) {
+			$entity->$key = $array[$value[0]];
+		}
+		
+		return $entity;
+	}
+	
+	protected function _getColumnData() {
+		return $this->_mapper->getColumnData($this->_class);
+	}
+	
+	protected function _getTable() {
+		return $this->_mapper->getTable($this->_class);
+	}
+	
+	public function getAdapter() {
+		return $this->_adapter;
 	}
 	
 }

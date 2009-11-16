@@ -86,4 +86,8 @@ class SimDAL_Persistence_MysqlAdapter implements SimDAL_Persistence_AdapterInter
 		return $row;
 	}
 	
+	public function query($sql) {
+		
+	}
+	
 }

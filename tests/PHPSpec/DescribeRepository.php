@@ -2,8 +2,26 @@
 
 class DescribeRepository extends PHPSpec_Context {
 	
+	private $unitOfWork;
+	private $mapper;
 	private $adapter;
 	private $repo;
+	
+	public function beforeAll() {
+		$this->mapper = mockery('SimDAL_Mapper');
+		$this->mapper->shouldReceive('getTable')->with('TestDomain_Project')->andReturn('projects');
+		
+		$columns = array(
+			'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
+			'name' => array('name', 'varchar'),
+			'description' => array('description', 'varchar')
+		);
+		$this->mapper->shouldReceive('getColumnData')->with('TestDomain_Project')->andReturn($columns);
+	}
+	
+	public function afterAll() {
+		unset($this->mapper);
+	}
 	
 	public function before() {
 		$this->storage = array(
@@ -12,26 +30,40 @@ class DescribeRepository extends PHPSpec_Context {
 					'id'=>1,
 					'name'=>'Project',
 					'description'=>'This is a test Project'
+				),
+				'2'=>array(
+					'id'=>2,
+					'name'=>'Project2',
+					'description'=>'This is a test Project'
 				)
 			)
 		);
 		$this->adapter = mockery('SimDAL_Persistence_AdapterInterface');
-		$this->repo = new TestDomain_ProjectRepository($this->adapter);
+		
+		$this->unitOfWork = mockery('SimDAL_UnitOfWork');
+		
+		$this->repo = new TestDomain_ProjectRepository($this->adapter, $this->mapper, $this->unitOfWork);
 	}
 	
 	public function after() {
 		unset($this->repo);
 		unset($this->adapter);
+		unset($this->unitOfWork);
 	}
 	
 	public function itShouldThrowExceptionIfNoPersistenceAdapterIsSet() {
 		$this->spec('TestDomain_ProjectRepository', '__construct')->should->throw('SimDAL_PersistenceAdapterIsNotSetException');
 	}
 	
+	public function itShouldThrowExceptionIfNoMapperIsSet() {
+		$this->spec('TestDomain_ProjectRepository', '__construct', array($this->adapter))->should->throw('SimDAL_MapperIsNotSetException');
+	}
+	
 	public function itShouldAddNewEntityToBeSaved() {
 		$project = new TestDomain_Project();
 		$project->name = 'Project';
 		$project->description = 'This is a test project';
+		$project->typeId = 1;
 		
 		$this->repo->add($project);
 		
@@ -108,62 +140,40 @@ class DescribeRepository extends PHPSpec_Context {
 		$this->spec($result)->should->be(array());
 	}
 	
-	public function itShouldSaveEntityIntoPersistentStorageWhenCommited() {
-		$data = array(
-			'id' => null,
-			'name' => 'Project',
-			'description' => 'This is a test project'
-		);
-		$this->adapter->shouldReceive('insert')->with('projects', $data)->andReturn(1);
-		
+	public function itShouldLoadEntitySetsBasedOnSql() {
+		$this->adapter
+			->shouldReceive('query')
+			->with("SELECT * FROM `projects` WHERE `description`='This is a test Project'")
+			->andReturn(array($this->storage['projects']['1'], $this->storage['projects']['2']));
+			
 		$project = new TestDomain_Project();
+		$project->id = 1;
 		$project->name = 'Project';
-		$project->description = 'This is a test project';
+		$project->description = 'This is a test Project';
+		$project2 = new TestDomain_Project();
+		$project2->id = 2;
+		$project2->name = 'Project2';
+		$project2->description = 'This is a test Project';
+		$expect = array(
+			1=>$project,
+			2=>$project2
+		);
 		
-		$this->repo->add($project);
+		$projects = $this->repo->query("SELECT * FROM `projects` WHERE `description`='This is a test Project'");
 		
-		$this->repo->commit();
-		
-		$this->spec($project->id)->should->equal(1);
-	}
-	
-	public function itShouldSaveChangesToEntitiesInPersistentStorageWhenCommited() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects'][1]);
-		$this->adapter->shouldReceive('update')->with('projects', array('description'=>'changed'), 1)->andReturn(1);
-		
-		$project = $this->repo->findById(1);
-		$project->description = 'changed';
-		
-		$this->repo->commit();
-		
-		$this->spec($this->repo->getChanges())->should->be(array());
-	}
-	
-	public function itShouldDeleteEntitiesMarkedForDeletionFromPersistentStorageWhenCommited() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects'][1]);
-		$this->adapter->shouldReceive('delete')->with('projects', 1)->andReturn(1);
-		
-		$project = $this->repo->findById(1);
-		$this->repo->delete($project);
-		$this->repo->commit();
-		
-		$this->spec($this->repo->getDeleted())->should->be(array());
-	}
-	
-	public function itShouldSaveChangesToEntitySetsThroughEntitySetCommandsInOneQueryToStorage() {
-		$this->pending();
-	}
-	
-	public function itShouldLoadEntitySetsBasedOnCriterion() {
-		$this->pending();
+		$this->spec($projects)->should->be($expect);
 	}
 	
 	public function itShouldBeAbleToUpdateEntireSetsInOneCommand() {
+		$this->pending();
+	}
+
+	public function itShouldSaveChangesToEntitySetsThroughEntitySetCommandsInOneQueryToStorage() {
 		$this->pending();
 	}
 	
 	public function itShouldUpdateEntitiesWithoutLoading() {
 		$this->pending();
 	}
-
+	
 }
