@@ -49,14 +49,14 @@ class SimDAL_Persistence_MysqlAdapter implements SimDAL_Persistence_AdapterInter
 		return mysql_insert_id($this->_conn);
 	}
 	
-	public function update($table, $data, $id) {
+	public function update($table, $data, $id, $column='id') {
 		$this->_connect();
 		
 		$sql = "UPDATE `$table` SET ";
 		foreach ($data as $key=>$value) {
 			$sql .= "`$key`='$value',";
 		}
-		$sql = substr($sql, 0, -1) . " WHERE `id`=$id";
+		$sql = substr($sql, 0, -1) . " WHERE `$column`=$id";
 		
 		mysql_query($sql, $this->_conn);
 		
@@ -73,10 +73,27 @@ class SimDAL_Persistence_MysqlAdapter implements SimDAL_Persistence_AdapterInter
 		return mysql_affected_rows($this->_conn);
 	}
 	
-	public function findById($table, $id) {
+	public function findById($table, $id, $column = 'id') {
 		$this->_connect();
 		
-		$sql = "SELECT * FROM `$table` WHERE `id` = $id";
+		$sql = "SELECT * FROM `$table` WHERE `$column` = $id";
+		$query = mysql_query($sql, $this->_conn);
+		if (mysql_num_rows($query) <= 0) {
+			return null;
+		}
+		$row = mysql_fetch_assoc($query);
+		
+		return $row;
+	}
+	
+	public function findByColumn($table, $value, $column) {
+		$this->_connect();
+		
+		if (is_string($value)) {
+			$value = "'$value'";
+		}
+		
+		$sql = "SELECT * FROM `$table` WHERE `$column` = $value";
 		$query = mysql_query($sql, $this->_conn);
 		if (mysql_num_rows($query) <= 0) {
 			return null;

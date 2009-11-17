@@ -10,7 +10,7 @@ class SimDAL_Repository {
 	
 	protected $_mapper = null;
 	
-	protected $_class = 'TestDomain_Project';
+	protected $_class = null;
 	
 	protected $_new = array();
 	
@@ -66,7 +66,9 @@ class SimDAL_Repository {
 			return $entity;
 		}
 		
-		$array = $this->_adapter->findById($this->_getTable(), $id);
+		$pk = $this->_mapper->getPrimaryKey($this->_class);
+		
+		$array = $this->_adapter->findById($this->_getTable(), $id, $pk);
 		if (is_null($array)) {
 			return null;
 		}
@@ -169,7 +171,7 @@ class SimDAL_Repository {
 	protected function _insert($entity) {
 		$data = $this->_arrayForStorageFromEntity($entity);
 		
-		$id = $this->_adapter->insert($this->_table, $data);
+		$id = $this->_adapter->insert($this->_getTable(), $data);
 		
 		$entity->id = $id;
 		$this->_loaded[$entity->id] = $entity;
@@ -185,7 +187,9 @@ class SimDAL_Repository {
 			return;
 		}
 		
-		$this->_adapter->update($this->_table, $data, $entity->id);
+		$pk = $this->_mapper->getPrimaryKey($this->_class);
+		
+		$this->_adapter->update($this->_getTable(), $data, $entity->id, $pk);
 		
 		$this->_updateCleanData($entity);
 	}
@@ -220,11 +224,34 @@ class SimDAL_Repository {
 		}
 	}
 	
-	protected function _arrayForStorageFromEntity($entity) {
+	/*protected function _arrayForStorageFromEntity($entity) {
 		$array = array();
 		
 		foreach($this->_getColumnData() as $key=>$value) {
 			$array[$value[0]] = $entity->$key;
+		}
+		
+		return $array;
+	}*/
+
+	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
+		$array = array();
+		
+		foreach($this->_mapper->getColumnData(get_class($entity)) as $key=>$value) {
+			if (!$includeNull && is_null($entity->$key)) {
+				continue;
+			}
+			if ($transformData) {
+				if (is_null($entity->$key)) {
+					$array[$value[0]] = 'NULL';
+				} else if ($value[1] == 'int') {
+					$array[$value[0]] = $entity->$key;
+				} else if ($value[1] == 'varchar' || $value[1] == 'date') {
+					$array[$value[0]] = "'".$entity->$key."'";
+				}
+			} else {
+				$array[$value[0]] = $entity->$key;
+			}
 		}
 		
 		return $array;

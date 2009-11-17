@@ -16,8 +16,23 @@ class SimDAL_Mapper {
 		return $this->map[$class]['columns'];
 	}
 	
-	public function getManyToOneRelations($class) {
-		
+	public function getPrimaryKey($class) {
+		foreach ($this->map[$class]['columns'] as $property=>$column) {
+			if ($column[2]['pk'] === true) {
+				return $column[0];
+			}
+		}
 	}
 	
+	public function getManyToOneRelations($class) {
+		$associations = array();
+		foreach ($this->map[$class]['associations'] as $association) {
+			if ($association[0] == 'many-to-one') {
+				$associations[] = $association;
+			}
+		}
+		
+		return $associations;
+	}
+
 }
