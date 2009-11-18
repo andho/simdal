@@ -33,7 +33,7 @@ class SimDAL_UnitOfWork {
 			return false;
 		}
 		
-		$class = get_class($entity);
+		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
 		$this->_new[$table][] = $entity;
@@ -52,7 +52,7 @@ class SimDAL_UnitOfWork {
 			return false;
 		}*/
 		
-		$class = get_class($entity);
+		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
 		$this->_modified[$table][$entity->id] = $entity;
@@ -84,7 +84,7 @@ class SimDAL_UnitOfWork {
 	
 	public function delete($entity, $table=null) {
 		if (is_object($entity)) {
-			$class = get_class($entity);
+			$class = $this->_getClass($entity);
 			$table = $this->_mapper->getTable($class);
 			
 			$this->_delete[$table][$entity->id] = $entity;
@@ -111,7 +111,7 @@ class SimDAL_UnitOfWork {
 			return false;
 		}
 		
-		$columnData = $this->_mapper->getColumnData(get_class($entities[0]));
+		$columnData = $this->_mapper->getColumnData($this->_getClass($entities[0]));
 		
 		if (count($entities) == 1) {
 			$this->_resolveManyToOneRelationsForInsert($entities[0]);
@@ -135,7 +135,7 @@ class SimDAL_UnitOfWork {
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
-		foreach($this->_mapper->getColumnData(get_class($entity)) as $key=>$value) {
+		foreach($this->_mapper->getColumnData($this->_getClass($entity)) as $key=>$value) {
 			if (!$includeNull && is_null($entity->$key)) {
 				continue;
 			}
@@ -173,9 +173,9 @@ class SimDAL_UnitOfWork {
 	}
 	
 	protected function _resolveManyToOneRelationsForInsert($entity) {
-		$class = get_class($entity);
+		$class = $this->_getClass($entity);
 		
-		foreach ($this->_mapper->getManyToOneRelations(get_class($entity)) as $relation) {
+		foreach ($this->_mapper->getManyToOneRelations($this->_getClass($entity)) as $relation) {
 			$getMethod = 'get'.$relation[1];
 			$setMethod = 'set'.$relation[1];
 			if (!method_exists($entity, $getMethod)) {
@@ -197,6 +197,15 @@ class SimDAL_UnitOfWork {
 			
 			$entity->$setMethod($relation_entity);
 		}
+	}
+	
+	protected function _getClass($entity) {
+		$class = get_parent_class($entity);
+		if (!$class) {
+			$class = get_class($entity);
+		}
+		
+		return $class;
 	}
 	
 }

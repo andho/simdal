@@ -35,4 +35,8 @@ class SimDAL_Mapper {
 		return $associations;
 	}
 
+	public function getAll() {
+		return $this->map;
+	}
+	
 }

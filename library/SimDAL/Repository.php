@@ -20,6 +20,22 @@ class SimDAL_Repository {
 	
 	protected $_cleanData = array();
 	
+	static public function setDefaultAdapter($adapter) {
+		if (!$adapter instanceof SimDAL_Persistence_AdapterInterface) {
+			return false;
+		}
+		
+		self::$_defaultAdapter = $adapter;
+	}
+	
+	static public function setDefaultMapper($mapper) {
+		if (!$mapper instanceof SimDAL_Mapper) {
+			return false;
+		}
+		
+		self::$_defaultMapper = $mapper;
+	}
+	
 	public function __construct($adapter=null, $mapper=null) {
 		if ($adapter instanceof SimDAL_Persistence_AdapterInterface) {
 			$this->_adapter = $adapter;
@@ -237,7 +253,12 @@ class SimDAL_Repository {
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
-		foreach($this->_mapper->getColumnData(get_class($entity)) as $key=>$value) {
+		$class = get_parent_class($entity);
+		if (!$class) {
+			$class = get_class($entity);
+		}
+		
+		foreach($this->_mapper->getColumnData($class) as $key=>$value) {
 			if (!$includeNull && is_null($entity->$key)) {
 				continue;
 			}
