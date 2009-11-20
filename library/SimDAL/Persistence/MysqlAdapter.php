@@ -44,7 +44,9 @@ class SimDAL_Persistence_MysqlAdapter implements SimDAL_Persistence_AdapterInter
 			$sql = substr($sql, 0, -1);
 		}*/
 			
-		mysql_query($sql, $this->_conn);
+		if (!mysql_query($sql, $this->_conn)) {
+			return false;
+		}
 		
 		return mysql_insert_id($this->_conn);
 	}
@@ -105,6 +107,10 @@ class SimDAL_Persistence_MysqlAdapter implements SimDAL_Persistence_AdapterInter
 	
 	public function query($sql) {
 		
+	}
+	
+	public function getError() {
+		return mysql_error($this->_conn);
 	}
 	
 }

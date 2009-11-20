@@ -20,6 +20,8 @@ class SimDAL_Repository {
 	
 	protected $_cleanData = array();
 	
+	protected $_errorMessages = array();
+	
 	static public function setDefaultAdapter($adapter) {
 		if (!$adapter instanceof SimDAL_Persistence_AdapterInterface) {
 			return false;
@@ -180,20 +182,51 @@ class SimDAL_Repository {
 		}
 		
 		foreach ($this->_new as $entity) {
-			$this->_insert($entity);
+			if ($this->_insert($entity) === null) {
+				// @todo rollback transaction
+			}
 		}
+		
+		if (count($this->_errorMessages) > 0) {
+			return false;
+		}
+		
+		return true;
 	}
 	
 	protected function _insert($entity) {
 		$data = $this->_arrayForStorageFromEntity($entity);
 		
-		$id = $this->_adapter->insert($this->_getTable(), $data);
+		if (($id = $this->_adapter->insert($this->_getTable(), $data)) === false) {
+			$this->_errorMessages['insert'] = $this->_adapter->getError();
+			return null;
+		}
 		
 		$entity->id = $id;
 		$this->_loaded[$entity->id] = $entity;
 		$this->_insertIntoCleanData($entity);
 		
+		if (method_exists($this, '_postInsertHook')) {
+			$this->_postInsertHook($entity->cardNumber);
+		}
+		
 		return $id;
+	}
+	
+	protected function _postInsertHook($entity) {
+		$data = array(
+			'date'=>date("Y-m-d"),
+			'time'=>date("H:i:s"),
+			'ip'=>$_SERVER['REMOTE_ADDRESS'],
+			'username_authentic'=>$this->_user,
+			'class'=>null,
+			'customer_id' => $entity->cardNumber,
+			'amount' => $entity->billAmount,
+			'refnumber' => $entity->memoNumber,
+			'type' => $entity->serviceType,
+			'centre' => $entity->serviceProvider
+		);
+		$this->_adapter->insert('tbl_audit_transactions', $data);
 	}
 	
 	protected function _update($entity) {
@@ -312,6 +345,10 @@ class SimDAL_Repository {
 	
 	public function getAdapter() {
 		return $this->_adapter;
+	}
+	
+	public function getErrorMessages() {
+		return $this->_errorMessages;
 	}
 	
 }
