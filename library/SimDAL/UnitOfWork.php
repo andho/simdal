@@ -2,6 +2,11 @@
 
 class SimDAL_UnitOfWork {
 	
+	/**
+	 * Mapper
+	 *
+	 * @var SimDAL_Mapper
+	 */
 	private $_mapper = null;
 	private $_adapter = null;
 	
@@ -47,6 +52,12 @@ class SimDAL_UnitOfWork {
 		return true;
 	}
 	
+	public function updateCleanEntity($entity) {
+		$copy = clone($entity);
+		
+		$this->update($entity, $copy);
+	}
+	
 	public function update($entity, $actual_data) {
 		/*if ($this->_entityIsNew($entity)) {
 			return false;
@@ -68,8 +79,12 @@ class SimDAL_UnitOfWork {
 					continue;
 				}
 				
-				foreach ($entity as $key=>$value) {
-					if ($entity->$key === $this->_actual[$table][$id][$key]) {
+				if (is_object($this->_actual[$table][$id]) && $entity === $this->_actual[$table][$id]) {
+					continue;
+				}
+				
+				foreach ($this->_actual[$table][$id] as $key=>$value) {
+					if ($entity->$key === $value) {
 						continue;
 					}
 					
@@ -98,6 +113,48 @@ class SimDAL_UnitOfWork {
 	
 	public function getDeleted() {
 		return $this->_delete;
+	}
+	
+	public function revert($entity) {
+		$this->_revertDeleted($entity);
+		
+		$this->_revertModified($entity);
+		
+		$this->_revertNew($entity);
+	}
+	
+	protected function _revertDeleted($entity) {
+		$table = $this->_getTable($entity);
+		if (array_key_exists($entity->id, $this->_delete[$table])) {
+			unset($this->_delete[$table][$entity->id]);
+		}
+	}
+	
+	protected function _revertModified($entity) {
+		$table = $this->_getTable($entity);
+		if (array_key_exists($entity->id, $this->_modified[$table])) {
+			foreach ($this->_actual[$table][$entity->id] as $key=>$value) {
+				$entity->$key = $value;
+			}
+			unset($this->_modified[$table][$entity->id]);
+			unset($this->_actual[$table][$entity->id]);
+		}
+	}
+	
+	protected function _revertNew($entity) {
+		$table = $this->_getTable($entity);
+		
+		if (in_array($entity, $this->_new[$table])) {
+			$key = array_search($entity, $this->_new[$table]);
+			unset($this->_new[$table][$key]);
+		}
+	}
+	
+	protected function _getTable($entity) {
+		$class = $this->_getClass($entity);
+		$table = $this->_mapper->getTable($class);
+		
+		return $table;
 	}
 	
 	public function commit() {

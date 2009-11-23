@@ -2,6 +2,11 @@
 
 class DescribeUnitOfWork extends PHPSpec_Context {
 	
+	/**
+	 * Unit of work
+	 *
+	 * @var SimDAL_UnitOfWork
+	 */
 	private $unitOfWork;
 	private $adapter;
 	private $mapper;
@@ -17,7 +22,7 @@ class DescribeUnitOfWork extends PHPSpec_Context {
 			'typeId' => array('type_id', 'int')
 		);
 		$relations = array(
-			array('many-to-one', 'TestDomain_Type', array('key'=>'typeId'))
+			array('many-to-one', 'TestDomain_Type', array('fk'=>'typeId'))
 		);
 		$this->mapper->shouldReceive('getColumnData')->with('TestDomain_Project')->andReturn($columns);
 		$this->mapper->shouldReceive('getManyToOneRelations')->with('TestDomain_Project')->andReturn($relations);
@@ -27,8 +32,14 @@ class DescribeUnitOfWork extends PHPSpec_Context {
 			'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
 			'name' => array('name', 'varchar')
 		);
+		$relations2 = array(
+			array('one-to-many', 'TestDomain_Type', array('fk'=>'typeId'))
+		);
 		$this->mapper->shouldReceive('getColumnData')->with('TestDomain_Type')->andReturn($columns2);
+		$this->mapper->shouldReceive('getOneToManyRelations')->with('TestDomain_Type')->andReturn($relations2);
 		$this->mapper->shouldReceive('getManyToOneRelations')->with('TestDomain_Type')->andReturn(array());
+		$this->mapper->shouldReceive('getPrimaryKey')->with('TestDomain_Type')->andReturn('id');
+		$this->mapper->shouldReceive('getTable')->with('TestDomain_Type')->andReturn('types');
 	}
 	
 	public function afterAll() {
@@ -39,6 +50,9 @@ class DescribeUnitOfWork extends PHPSpec_Context {
 		$this->adapter = mockery('SimDAL_Persistence_AdapterInterface');
 		
 		$this->unitOfWork = new SimDAL_UnitOfWork($this->adapter, $this->mapper);
+		
+		SimDAL_Repository::setDefaultAdapter($this->adapter);
+		SimDAL_Repository::setDefaultMapper($this->mapper);
 	}
 	
 	public function after() {
@@ -101,8 +115,52 @@ class DescribeUnitOfWork extends PHPSpec_Context {
 		$this->spec($result)->should->equal(array('projects'=>array(1=>1)));
 	}
 	
-	public function itShouldAddRelatedEntitiesToBeUpdatedOrInserted() {
-		$this->pending();
+	public function itShouldAddRelatedEntitiesToBeInserted() {
+		$this->adapter->shouldReceive('insert')->with('types', array('name'=>'Library'))->andReturn(1);
+		$this->adapter->shouldReceive('insert')->with('projects', array(
+			'name' => 'Project',
+			'description' => 'This is a test Project',
+			'type_id' => 1
+		))->andReturn(1);
+		
+		$project = new TestDomain_Project();
+		$project->name = 'Project';
+		$project->description = 'This is a test Project';
+		
+		$this->unitOfWork->add($project);
+		
+		$type = new TestDomain_Type();
+		$type->name = 'Library';
+		$project->setTestDomain_Type($type);
+		
+		$this->unitOfWork->commit();
+		
+		$this->adapter->mockery_verify();
+	}
+	
+	public function itShouldAddRelatedEntitiesToBeUpdated() {
+		$this->adapter->shouldReceive('findById')->with('types', 1, 'id')->andReturn(1);
+		$type_data = array(
+			'id' => 1,
+			'name' => 'Library'
+		);
+		$this->adapter->shouldReceive('update')->with('types', array('name'=>'Library changed'), 1)->andReturn(1);
+		$this->adapter->shouldReceive('insert')->with('projects', array(
+			'name' => 'Project',
+			'description' => 'This is a test Project',
+			'type_id' => 1
+		))->andReturn(1);
+		
+		$project = new TestDomain_Project();
+		$project->name = 'Project';
+		$project->description = 'This is a test Project';
+		$project->typeId = 1;
+		
+		$type = $project->getTestDomain_Type();
+		
+		$this->unitOfWork->add($project);
+		
+		$this->adapter->mockery_verify();
 	}
 	
 	public function itShouldSaveNewEntitiesOnCommit() {
@@ -150,7 +208,7 @@ class DescribeUnitOfWork extends PHPSpec_Context {
 		$this->pending();
 	}
 	
-	public function itShouldSaveNewRelatedEntitiesOnCommit() {
+	public function itShouldRelatedEntitiesOfNewEntitiesOnCommit() {
 		$type_data = array(
 			'name' => 'Library'
 		);

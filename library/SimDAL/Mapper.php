@@ -39,4 +39,36 @@ class SimDAL_Mapper {
 		return $this->map;
 	}
 	
+	public function getClassPriority() {
+		$priority = array();
+		
+		foreach (array_keys($this->map) as $class) {
+			$priority[0][$class] = $class;
+			$priority2[$class] = 0;
+		}
+		
+		$highest = 0;
+		
+		foreach ($this->map as $class=>$metadata) {
+			switch ($metadata[0]) {
+				case 'many-to-one':
+					$i = $priority2[$metadata[1]];
+					$priority[++$i][$class] = $class;
+					unset($priority[$priority2[$class]][$class]);
+					$priority2[$class] = $i;
+					break;
+			}
+		}
+		
+		$ordered = array();
+		
+		foreach ($priority as $level=>$classes) {
+			foreach ($classes as $class) {
+				$ordered[] = $class;
+			}
+		}
+		
+		return $ordered;
+	}
+	
 }

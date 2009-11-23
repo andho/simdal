@@ -10,6 +10,7 @@ class DescribeRepository extends PHPSpec_Context {
 	public function beforeAll() {
 		$this->mapper = mockery('SimDAL_Mapper');
 		$this->mapper->shouldReceive('getTable')->with('TestDomain_Project')->andReturn('projects');
+		$this->mapper->shouldReceive('getPrimaryKey')->with('TestDomain_Project')->andReturn('id');
 		
 		$columns = array(
 			'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
@@ -73,7 +74,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldLoadUnloadedEntityFromAdapterWhenFindingById() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1, 'id')->andReturn($this->storage['projects']['1']);
 		
 		$prj = new TestDomain_Project();
 		$prj->id = 1;
@@ -86,7 +87,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldLoadLoadedEntityFromHashWhenFindingById() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1'])->ordered();
+		$this->adapter->shouldReceive('findById')->with('projects', 1, 'id')->andReturn($this->storage['projects']['1'])->ordered();
 		
 		$project = $this->repo->findById(1);
 		
@@ -96,7 +97,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldOnlySendChangedFieldsToUpdate() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1, 'id')->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		$project->description = 'changed';
@@ -107,7 +108,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldSetEntityForRemovalWhenEntityIsPassedToDeleteMethod() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1, 'id')->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		
@@ -115,7 +116,7 @@ class DescribeRepository extends PHPSpec_Context {
 		
 		$result = $this->repo->getDeleted();
 		
-		$this->spec($result)->should->equal(array(1=>1));
+		$this->spec($result)->should->equal(array(1=>$project));
 	}
 	
 	public function itShouldSetEntityForRemovalWhenEntityIdIsPassedToDeleteMethod() {
@@ -127,7 +128,7 @@ class DescribeRepository extends PHPSpec_Context {
 	}
 	
 	public function itShouldRevertEntityToItsOriginalValues() {
-		$this->adapter->shouldReceive('findById')->with('projects', 1)->andReturn($this->storage['projects']['1']);
+		$this->adapter->shouldReceive('findById')->with('projects', 1, 'id')->andReturn($this->storage['projects']['1']);
 		
 		$project = $this->repo->findById(1);
 		

@@ -13,15 +13,16 @@ class TestDomain_Project {
 	private $type = null;
 	
 	public function getTestDomain_Type() {
+		if (is_null($this->type)) {
+			$trepo = new TestDomain_TypeRepository();
+			$this->type = $trepo->findById($this->typeId);
+		}
 		return $this->type;
 	}
 	
 	public function setTestDomain_Type(TestDomain_Type $type) {
+		$this->typeId = $type->id;
 		$this->type = $type;
-		
-		if (!is_null($type->id)) {
-			$this->typeId = $type->id;
-		}
 	}
 	
 }

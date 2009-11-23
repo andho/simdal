@@ -12,8 +12,6 @@ class SimDAL_Repository {
 	
 	protected $_class = null;
 	
-	protected $_new = array();
-	
 	protected $_loaded = array();
 	
 	protected $_delete = array();
@@ -57,25 +55,22 @@ class SimDAL_Repository {
 	}
 	
 	public function add($entity) {
-		if (in_array($entity, $this->_new) ) {
+		if (!$this->_adapter->insert($entity)){
 			return false;
 		}
-		
-		$this->_new[] = $entity;
 		
 		return true;
 	}
 	
 	public function delete($entity) {
-		if (is_object($entity)) {
-			$this->_delete[$entity->id] = $entity->id;
-		} else {
-			$this->_delete[$entity] = $entity;
-		}
+		return $this->getAdapter()->delete($entity, $this->_getTable());
 	}
 	
 	public function getNew() {
-		return $this->_new;
+		$uow = $this->_getUnitOfWork();
+		$new = $uow->getNew();
+		
+		return $new[$this->_getTable()];
 	}
 	
 	public function findById($id) {
@@ -87,18 +82,10 @@ class SimDAL_Repository {
 		$pk = $this->_mapper->getPrimaryKey($this->_class);
 		
 		$array = $this->_adapter->findById($this->_getTable(), $id, $pk);
-		if (is_null($array)) {
-			return null;
-		}
 		
-		$class = $this->_class;
+		$entities = $this->_entitiesFromArray($array);
 		
-		$entity = $this->_entityFromArray($array);
-		
-		$this->_loaded[$entity->id] = $entity;
-		$this->_insertIntoCleanData($entity);
-		
-		return $entity;
+		return $entities[0];
 	}
 	
 	public function query($sql) {
@@ -119,6 +106,50 @@ class SimDAL_Repository {
 		return $collection;
 	}
 	
+	/**
+	 * Return a unit of work object
+	 *
+	 * @return SimDAL_UnitOfWork
+	 */
+	protected function _getUnitOfWork() {
+		return $this->getAdapter()->getUnitOfWork();
+	}
+	
+	protected function _entitiesFromArray($rows) {
+		if (is_null($rows)) {
+			return null;
+		}
+		
+		$class = $this->_class;
+		
+		$output = array();
+		
+		if (!is_array($rows[0])) {
+			$rows = array($rows);
+		}
+		
+		foreach ($rows as $row) {
+			$entity = $this->_entityFromArray($row);
+			
+			$this->_loaded[$entity->id] = $entity;
+			$this->_loadIntoUnitOfWork($entity);
+			
+			$output[] = $entity;
+		}
+		
+		return $output;
+	}
+	
+	protected function _loadIntoUnitOfWork($entity) {
+		$uow = $this->_getUnitOfWork();
+		
+		if (!$uow->updateCleanEntity($entity)) {
+			return false;
+		}
+		
+		return $entity;
+	}
+	
 	protected function _getFromLoaded($id) {
 		if ($this->_isLoaded($id)) {
 			return $this->_loaded[$id];
@@ -136,39 +167,20 @@ class SimDAL_Repository {
 	}
 	
 	public function getChanges() {
-		$array = array();
+		$changes = $this->_getUnitOfWork()->getChanges();
+		$table = $this->_getTable();
 		
-		foreach ($this->_loaded as $id=>$obj) {
-			if (!array_key_exists($id, $this->_cleanData)) {
-				continue;
-			}
-			
-			foreach ($this->_cleanData[$id] as $key=>$value) {
-				if ($value !== $obj->$key) {
-					$array[$id][$key] = $obj->$key;
-				}
-			}
-		}
-		
-		return $array;
+		return isset($changes[$table]) ? $changes[$table] : array();
 	}
 	
 	public function getDeleted() {
-		return $this->_delete;
+		$deleted = $this->_getUnitOfWork()->getDeleted();
+		
+		return $deleted[$this->_getTable()];
 	}
 	
 	public function revert($entity) {
-		if (array_key_exists($entity->id, $this->_delete)) {
-			unset($this->_delete[$entity->id]);
-		}
-		
-		if (!array_key_exists($entity->id, $this->_cleanData)) {
-			return;
-		}
-		
-		foreach ($this->_cleanData[$entity->id] as $key=>$value) {
-			$entity->$key = $value;
-		}
+		$this->_getUnitOfWork()->revert($entity);
 	}
 	
 	public function commit() {
@@ -273,16 +285,6 @@ class SimDAL_Repository {
 		}
 	}
 	
-	/*protected function _arrayForStorageFromEntity($entity) {
-		$array = array();
-		
-		foreach($this->_getColumnData() as $key=>$value) {
-			$array[$value[0]] = $entity->$key;
-		}
-		
-		return $array;
-	}*/
-
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
@@ -343,6 +345,11 @@ class SimDAL_Repository {
 		return $this->_mapper->getTable($this->_class);
 	}
 	
+	/**
+	 * return Adapter
+	 *
+	 * @return SimDAL_Persistence_AdapterInterface
+	 */
 	public function getAdapter() {
 		return $this->_adapter;
 	}

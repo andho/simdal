@@ -2,6 +2,6 @@
 
 class TestDomain_ProjectRepository extends SimDAL_Repository {
 	
-	protected $_table = 'projects';
+	protected $_class = 'TestDomain_Project';
 	
 }
