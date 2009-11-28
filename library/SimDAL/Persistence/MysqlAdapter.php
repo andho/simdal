@@ -117,13 +117,14 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	
 	public function findByColumn($class, $value, $column, $limit=1) {
 		$table = $this->_getMapper()->getTable($class);
+		$property = $this->_getMapper()->getColumn($class, $column);
 		$this->_connect();
 		
 		if (is_string($value)) {
 			$value = "'$value'";
 		}
 		
-		$sql = "SELECT * FROM `$table` WHERE `$column` = $value";
+		$sql = "SELECT * FROM `$table` WHERE `{$property[0]}` = $value";
 		if (is_numeric($limit) && $limit > 0) {
 			$sql .= " LIMIT $limit";
 		}
@@ -145,7 +146,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		
 		$where = array();
 		foreach ($keyValues as $key=>$value) {
-			$where[] = "`$key` = '$value'";
+			$column = $this->_getMapper()->getColumn($class, $key);
+			$where[] = "`{$column[0]}` = '$value'";
 		}
 		
 		$sql = "SELECT * FROM `$table` WHERE ".implode(" AND ", $where)."$limit";
@@ -163,7 +165,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		
 		$where = array();
 		foreach ($keyValues as $key=>$value) {
-			$where[] = "`$key` = '$value'";
+			$column = $this->_getMapper()->getColumn($class, $key);
+			$where[] = "`{$column[0]}` = '$value'";
 		}
 		
 		if (!is_null($limit)) {
