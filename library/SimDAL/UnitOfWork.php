@@ -2,28 +2,21 @@
 
 class SimDAL_UnitOfWork {
 	
+	static protected $_defaultMapper;
+	
 	/**
 	 * Mapper
 	 *
 	 * @var SimDAL_Mapper
 	 */
 	private $_mapper = null;
-	private $_adapter = null;
 	
 	private $_new = array();
 	private $_modified = array();
 	private $_actual = array();
 	private $_delete = array();
 	
-	public function __construct($adapter=null, $mapper=null) {
-		if ($adapter instanceof SimDAL_Persistence_AdapterInterface) {
-			$this->_adapter = $adapter;
-		} else if (self::$_defaultAdapter instanceof SimDAL_Persistence_AdapterInterface) {
-			$this->_adapter = self::$_defaultAdapter;
-		} else {
-			throw new Simdal_PersistenceAdapterIsNotSetException();
-		}
-		
+	public function __construct($mapper=null) {		
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
 		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
@@ -41,7 +34,7 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
-		$this->_new[$table][] = $entity;
+		$this->_new[$class][] = $entity;
 	}
 	
 	public function getNew() {
@@ -66,8 +59,8 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
-		$this->_modified[$table][$entity->id] = $entity;
-		$this->_actual[$table][$entity->id] = $actual_data;
+		$this->_modified[$class][$entity->id] = $entity;
+		$this->_actual[$class][$entity->id] = $actual_data;
 	}
 	
 	public function getChanges() {
@@ -84,7 +77,7 @@ class SimDAL_UnitOfWork {
 				}
 				
 				foreach ($this->_actual[$table][$id] as $key=>$value) {
-					if ($entity->$key === $value) {
+					if ($entity->$key == $value) {
 						continue;
 					}
 					
@@ -97,22 +90,36 @@ class SimDAL_UnitOfWork {
 		
 	}
 	
-	public function delete($entity, $table=null) {
+	public function delete($entity, $class=null) {
 		if (is_object($entity)) {
 			$class = $this->_getClass($entity);
 			$table = $this->_mapper->getTable($class);
 			
-			$this->_delete[$table][$entity->id] = $entity;
+			$this->_delete[$class][$entity->id] = $entity;
 		} else {
-			if (is_null($table)) {
+			if (is_null($class)) {
 				return false;
 			}
-			$this->_delete[$table][$entity] = $entity;
+			$this->_delete[$class][$entity] = $entity;
 		}
 	}
 	
 	public function getDeleted() {
 		return $this->_delete;
+	}
+	
+	public function isLoaded($class, $id) {
+		return array_key_exists($this->_modified[$class][$id]);
+	}
+	
+	public function getLoaded($class=null, $id=null) {
+		if (!is_null($class) && !is_null($id)) {
+			return $this->_modified[$class][$id];
+		}
+		if (!is_null($class) && is_null($id)) {
+			return $this->_modified[$class];
+		}
+		return $this->_modified;
 	}
 	
 	public function revert($entity) {
@@ -161,6 +168,13 @@ class SimDAL_UnitOfWork {
 		foreach ($this->_new as $table=>$entities) {
 			$this->_insertEntities($entities, $table);
 		}
+	}
+	
+	public function clearAll() {
+		$this->_new = array();
+		$this->_modified = array();
+		$this->_actual = array();
+		$this->_delete = array();
 	}
 	
 	protected function _insertEntities($entities, $table) {

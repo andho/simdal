@@ -2,14 +2,10 @@
 
 interface SimDAL_Persistence_AdapterInterface {
 	
-	public function insert($table, $data);
+	//function _insert($table, $data);
 	
-	public function update($table, $data, $id);
+	//function _update($table, $data, $id, $column='id');
 	
-	public function delete($table, $id);
-	
-	public function findById($table, $id);
-	
-	public function query($sql);
+	//function _delete($table, $id);
 	
 }

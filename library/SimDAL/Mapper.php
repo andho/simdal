@@ -12,6 +12,10 @@ class SimDAL_Mapper {
 		return $this->map[$class]['table'];
 	}
 	
+	public function getColumn($class, $key) {
+		return $this->map[$class]['columns'][$key];
+	}
+	
 	public function getColumnData($class) {
 		return $this->map[$class]['columns'];
 	}
@@ -22,6 +26,10 @@ class SimDAL_Mapper {
 				return $column[0];
 			}
 		}
+	}
+	
+	public function getRelations($class) {
+		return $this->map[$class]['associations'];
 	}
 	
 	public function getManyToOneRelations($class) {

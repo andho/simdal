@@ -1,6 +1,6 @@
 <?php
 
-class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract {
+class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract {
 	
 	private $_host;
 	private $_username;
@@ -10,6 +10,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 	private $_transaction = false;
 	
 	public function __construct($host, $username, $password, $database) {
+		parent::__construct();
 		$this->_host = $host;
 		$this->_username = $username;
 		$this->_password = $password;
@@ -77,17 +78,15 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 	}
 	
 	public function deleteMultiple($class, $keys) {
-		$sql = $this->_processMultipleDeleteQuery($class, $keys);
+		$sql = $this->_processMultipleDeleteQueries($class, $keys);
 		
 		return $this->execute($sql);
 	}
 	
 	public function updateMultiple($class, $data) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$table = $this->_getMapper()->getTable($class);
 		
 		foreach ($data as $id=>$row) {
-			$sql = $this->_processUpdateQuery($table, $row, $id, $pk);
+			$sql = $this->_processUpdateQuery($class, $row, $id);
 			$result = $this->execute($sql);
 		}
 	}
@@ -97,25 +96,27 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 			$row = $this->_arrayForStorageFromEntity($entity, false, true);
 			$sql = $this->_processInsertQuery($class, $row);
 			$result = $this->execute($sql);
-			$id = $this->lastInsertedId();
+			$id = $this->lastInsertId();
 			$entity->id = $id;
 		}
 	}
 	
-	public function findById($table, $id, $column = 'id') {
+	public function findById($class, $id) {
+		$entity = $this->getUnitOfWork()->getLoaded($class, $id);
+		if (!is_null($entity)) {
+			return $entity;
+		}
+		$table = $this->_getMapper()->getTable($class);
+		$column = $this->_getMapper()->getPrimaryKey($class);
 		$this->_connect();
 		
 		$sql = "SELECT * FROM `$table` WHERE `$column` = $id";
-		$query = mysql_query($sql, $this->_conn);
-		if (mysql_num_rows($query) <= 0) {
-			return null;
-		}
-		$row = mysql_fetch_assoc($query);
 		
-		return $row;
+		return $this->_returnResultRow($sql, $class);
 	}
 	
-	public function findByColumn($table, $value, $column, $limit=1) {
+	public function findByColumn($class, $value, $column, $limit=1) {
+		$table = $this->_getMapper()->getTable($class);
 		$this->_connect();
 		
 		if (is_string($value)) {
@@ -127,26 +128,15 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 			$sql .= " LIMIT $limit";
 		}
 		
-		$query = mysql_query($sql, $this->_conn);
-		if (mysql_num_rows($query) <= 0) {
-			return null;
-		}
-	
-		if (is_numeric($limit) && $limit > 0) {
-			$row = mysql_fetch_assoc($query);
-			
-			return $row;
+		if ($limit == 1) {
+			return $this->_returnResultRow($sql, $class);
 		}
 		
-		$rows = array();
-		while ($row = mysql_fetch_assoc($query)) {
-			$rows[] = $row;
-		}
-		
-		return $rows;
+		return $this->_returnResultRows($sql, $class);
 	}
 	
-	public function findBy($table, array $keyValues, $limit=1) {
+	public function findBy($class, array $keyValues, $limit=1) {
+		$table = $this->_getMapper()->getTable($class);
 		$this->_connect();
 		
 		if (count($keyValues) == 0) {
@@ -160,26 +150,11 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 		
 		$sql = "SELECT * FROM `$table` WHERE ".implode(" AND ", $where)."$limit";
 		
-		$query = mysql_query($sql, $this->_conn);
-		if (mysql_num_rows($query) <= 0) {
-			return null;
-		}
-		
-		if (is_numeric($limit) && $limit > 0) {
-			$row = mysql_fetch_assoc($query);
-			
-			return $row;
-		}
-		
-		$rows = array();
-		while ($row = mysql_fetch_assoc($query)) {
-			$rows[] = $row;
-		}
-		
-		return $rows;
+		return $this->_returnResultRows($sql, $class);
 	}
 	
-	public function findByEither($table, array $keyValues, $limit1) {
+	public function findByEither($class, array $keyValues, $limit=1) {
+		$table = $this->_getMapper()->getTable($class);
 		$this->_connect();
 		
 		if (count($keyValues) == 0) {
@@ -191,25 +166,34 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 			$where[] = "`$key` = '$value'";
 		}
 		
+		if (!is_null($limit)) {
+			$limit = " LIMIT $limit";
+		}
+		
 		$sql = "SELECT * FROM `$table` WHERE ".implode(" OR ", $where)."$limit";
 		
+		return $this->_returnResultRows($sql, $class);
+	}
+	
+	protected function _returnResultRows($sql, $class) {
 		$query = mysql_query($sql, $this->_conn);
-		if (mysql_num_rows($query) <= 0) {
-			return null;
-		}
-		
-		if (is_numeric($limit) && $limit > 0) {
-			$row = mysql_fetch_assoc($query);
-			
-			return $row;
-		}
 		
 		$rows = array();
 		while ($row = mysql_fetch_assoc($query)) {
 			$rows[] = $row;
 		}
 		
-		return $rows;
+		return $this->_returnEntities($rows, $class);
+	}
+	
+	protected function _returnResultRow($sql, $class) {
+		$query = mysql_query($sql, $this->_conn);
+		if (mysql_num_rows($query) <= 0) {
+			return null;
+		}
+		$row = mysql_fetch_assoc($query);
+		
+		return $this->_returnEntity($row, $class);
 	}
 	
 	public function query($sql) {
@@ -224,7 +208,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 		return mysql_error($this->_conn);
 	}
 
-	protected function _processMultipleDeleteQuery($class, $keys) {
+	protected function _processMultipleDeleteQueres($class, $keys) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		
@@ -233,10 +217,16 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 		return $sql;
 	}
 	
-	protected function _processUpdateQuery($table, $data, $id, $pk) {
+	protected function _processUpdateQuery($class, $data, $id) {
+		$pk = $this->_getMapper()->getPrimaryKey($class);
+		$table = $this->_getMapper()->getTable($class);
+		
 		$sql = "UPDATE `$table` SET ";
+		
+		$columns = $this->_getMapper()->getColumnData($class);
+		
 		foreach ($data as $key=>$value) {
-			$sql .= $this->_quoteIdentifier($key)." = ".$this->_transformData($key, $value, $class) . ",";
+			$sql .= $this->_quoteIdentifier($columns[$key][0])." = ".$this->_transformData($key, $value, $class) . ",";
 		}
 		$sql = substr($sql,0,-1) . " WHERE `$pk`=$id";
 		
@@ -247,9 +237,9 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persitence_AdapterAbstract 
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		
-		$sql = "INSERT INTO `$table` (`".implode('`,`',array_keys($data))."`) VALUES (".implode('`,`',$this->_transformRow($data, $class)).")";
+		$sql = "INSERT INTO `$table` (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
-		return $this->execute($sql);
+		return $sql;
 	}
 	
 	protected function _processMultipleInsertQueries($class, $data) {
