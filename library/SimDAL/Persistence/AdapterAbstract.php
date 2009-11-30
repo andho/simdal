@@ -22,6 +22,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected $_updates = array();
 	protected $_deletes = array();
 	
+	protected $_errorMessages = array();
+	
 	static public function setDefaultMapper($mapper) {
 		if (!$mapper instanceof SimDAL_Mapper) {
 			return false;
@@ -80,10 +82,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				$this->deleteMultiple($class, $data);
 			}
 			//foreach ($this->_updates[$class] as $id=>$row) {
-				$this->updateMultiple($class, $this->_updates[$class]);
+			if (!$this->updateMultiple($class, $this->_updates[$class])) {
+				return false;
+			}
 			//}
 			
-			$this->insertMultiple($class, $this->_inserts[$class]);
+			if (!$this->insertMultiple($class, $this->_inserts[$class])) {
+				return false;
+			}
 		}
 		
 		$this->getUnitOfWork()->clearAll();
@@ -171,9 +177,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			switch ($relation[0]) {
 				case 'many-to-one':
 					$getter = 'get'.$relation[1];
-					$ch1 = $this->getUnitOfWork()->getChanges();
 					$relationEntity = $entity->$getter();
-					$ch2 = $this->getUnitOfWork()->getChanges();
 					if (!is_null($relationEntity) && $this->_isNew($relationEntity)) {
 						$this->insert($relationEntity);
 					}
@@ -267,7 +271,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					$array[$value[0]] = 'NULL';
 				} else if ($value[1] == 'int' || $value[1] == 'float') {
 					$array[$value[0]] = $entity->$key;
-				} else if ($value[1] == 'varchar' || $value[1] == 'date') {
+				} else if ($value[1] == 'varchar' || $value[1] == 'date' || $value[1] == 'datetime') {
 					$array[$value[0]] = "'".$entity->$key."'";
 				}
 			} else {
@@ -278,7 +282,29 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $array;
 	}
 	
+	protected function _setError($msg, $key=null) {
+		if (is_null($key)) {
+			$this->_errorMessages[] = $msg;
+			return;
+		}
+		
+		$this->_errorMessages[$key] = $msg;
+	}
+	
+	public function getErrorMessages() {
+		return $this->_errorMessages;
+	}
+	
+	public function getErrorMessage($key) {
+		if (!array_key_exists($key, $this->_errorMessages)) {
+			return false;
+		}
+		
+		return $this->_errorMessages[$key];
+	}
+	
 	abstract public function execute($sql);
 	
+	abstract public function getAdapterError();
 	
 }

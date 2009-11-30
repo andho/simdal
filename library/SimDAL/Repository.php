@@ -172,7 +172,13 @@ class SimDAL_Repository {
 	
 	public function commit() {
 		// @todo put everythin into a unitofwork
-		return $this->getAdapter()->commit();
+		$return = $this->getAdapter()->commit();
+		
+		if (!$return) {
+			$this->_errorMessages = $this->getAdapter()->getErrorMessages();
+		}
+		
+		return $return;
 	}
 	
 	/**

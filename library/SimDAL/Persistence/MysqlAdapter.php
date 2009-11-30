@@ -88,17 +88,30 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		foreach ($data as $id=>$row) {
 			$sql = $this->_processUpdateQuery($class, $row, $id);
 			$result = $this->execute($sql);
+			if ($result === false) {
+				return false;
+			}
 		}
+		
+		return true;
 	}
 	
 	public function insertMultiple($class, $data) {
+		if (!is_array($data) || count($data) <= 0) {
+			return true;
+		}
 		foreach ($data as $entity) {
 			$row = $this->_arrayForStorageFromEntity($entity, false, true);
 			$sql = $this->_processInsertQuery($class, $row);
-			$result = $this->execute($sql);
+			if (($result = $this->execute($sql)) === false) {
+				$this->_setError($this->getAdapterError());
+				return false;
+			}
 			$id = $this->lastInsertId();
 			$entity->id = $id;
 		}
+		
+		return true;
 	}
 	
 	public function findById($class, $id) {
@@ -107,7 +120,9 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			return $entity;
 		}
 		$table = $this->_getMapper()->getTable($class);
-		$column = $this->_getMapper()->getPrimaryKey($class);
+		$property = $this->_getMapper()->getPrimaryKey($class);
+		$column = $this->_getMapper()->getColumn($class, $property);
+		$column = $column[0];
 		$this->_connect();
 		
 		$sql = "SELECT * FROM `$table` WHERE `$column` = $id";
@@ -207,6 +222,10 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return mysql_insert_id($this->_conn);
 	}
 	
+	public function getAdapterError() {
+		return mysql_error($this->_conn);
+	}
+	
 	public function getError() {
 		return mysql_error($this->_conn);
 	}
@@ -222,6 +241,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	
 	protected function _processUpdateQuery($class, $data, $id) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
+		$pk = $this->_getMapper()->getColumn($class, $pk);
+		$pk = $pk[0];
 		$table = $this->_getMapper()->getTable($class);
 		
 		$sql = "UPDATE `$table` SET ";
@@ -268,7 +289,11 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		
 		$result = mysql_query($sql, $this->_conn);
 		
-		if ($result === true || $result === false) {
+		if ($result === false) {
+			return false;
+		}
+		
+		if ($result === true) {
 			return mysql_affected_rows($this->_conn);
 		}
 		

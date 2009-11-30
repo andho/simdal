@@ -23,7 +23,7 @@ class SimDAL_Mapper {
 	public function getPrimaryKey($class) {
 		foreach ($this->map[$class]['columns'] as $property=>$column) {
 			if ($column[2]['pk'] === true) {
-				return $column[0];
+				return $property;
 			}
 		}
 	}
