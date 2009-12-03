@@ -196,6 +196,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 	}
 	
+	public function returnQueryAsObject($class, $sql) {
+		return $this->_returnResultRow($sql, $class);
+	}
+	
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
 			return "NULL";
@@ -306,5 +310,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	abstract public function execute($sql);
 	
 	abstract public function getAdapterError();
+	
+	abstract protected function _returnResultRow($sql, $class);
+	
+	abstract protected function _returnResultRows($sql, $class);
 	
 }
