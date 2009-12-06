@@ -109,7 +109,7 @@ class SimDAL_UnitOfWork {
 	}
 	
 	public function isLoaded($class, $id) {
-		return array_key_exists($this->_modified[$class][$id]);
+		return array_key_exists($id, $this->_modified[$class]);
 	}
 	
 	public function getLoaded($class=null, $id=null) {
