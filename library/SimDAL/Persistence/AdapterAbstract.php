@@ -98,10 +98,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 
 	protected function _returnEntities($rows, $class) {
-		$collection = array();
+		$collection = new SimDAL_Collection();
 		
 		foreach ($rows as $row) {
-			$collection[] = $this->_returnEntity($row, $class);
+			$entity = $this->_returnEntity($row, $class);
+			$pk = $this->_getMapper()->getPrimaryKey($class);
+			$collection[$entity->$pk] = $entity;
 		}
 		
 		return $collection;
@@ -115,7 +117,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		$this->getUnitOfWork()->updateCleanEntity($entity);
-		
 		return $entity;
 	}
 	
