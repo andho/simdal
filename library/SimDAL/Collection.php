@@ -39,13 +39,13 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		return $this->_data[$offset];
 	}
 	public function offsetSet($offset, $value) {
-		if ($this->offsetExists($offset)) {
+		if (is_null($offset)) {
+			$offset = rand();
+			$key = count($this->_data);
+		} else if ($this->offsetExists($offset)) {
 			$key = array_search($offset, $this->_keymap);
 		} else {
 			$key = count($this->_data);
-		}
-		if (is_null($offset)) {
-			$offset = md5(time());
 		}
 		$this->_data[$offset] = $value;
 		$this->_keymap[$key] = $offset;
