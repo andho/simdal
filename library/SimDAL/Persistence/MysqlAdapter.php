@@ -112,7 +112,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		if (!is_array($data) || count($data) <= 0) {
 			return true;
 		}
-		foreach ($data as $entity) {
+ 		foreach ($data as $entity) {
 			$row = $this->_arrayForStorageFromEntity($entity, false, true);
 			$sql = $this->_processInsertQuery($class, $row);
 			if (($result = $this->execute($sql)) === false) {
