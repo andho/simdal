@@ -80,7 +80,14 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	public function deleteMultiple($class, $keys) {
 		$sql = $this->_processMultipleDeleteQueries($class, $keys);
 		
-		return $this->execute($sql);
+		$result = $this->execute($sql);
+		
+		if ($result === false) {
+			$this->_errorMessages['dberror'] = "There was an error saving to database";
+			return false;
+		}
+		
+		return false;
 	}
 	
 	public function updateMultiple($class, $data) {
@@ -89,6 +96,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			$sql = $this->_processUpdateQuery($class, $row, $id);
 			$result = $this->execute($sql);
 			if ($result === false) {
+				$this->_errorMessages['dberror'] = 'There was an error saving to database';
 				return false;
 			}
 		}
@@ -230,7 +238,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return mysql_error($this->_conn);
 	}
 
-	protected function _processMultipleDeleteQueres($class, $keys) {
+	protected function _processMultipleDeleteQueries($class, $keys) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		

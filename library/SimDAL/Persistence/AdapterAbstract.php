@@ -78,8 +78,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$priority = $this->_getMapper()->getClassPriority();
 		
 		foreach ($priority as $class) {
-			foreach ($this->_deletes[$class] as $data) {
-				$this->deleteMultiple($class, $data);
+			if (!$this->deleteMultiple($class, $data)) {
+				return false;
 			}
 			//foreach ($this->_updates[$class] as $id=>$row) {
 			if (!$this->updateMultiple($class, $this->_updates[$class])) {
@@ -208,11 +208,26 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		$column = $this->_getMapper()->getColumn($class, $key);
 		
-		//if ($column[1] == 'varchar') {
-			return "'$value'";
-		//}
-		
-		//return $value;
+		switch ($column[1]) {
+			case 'varchar':
+				return "'$value'";
+				break;
+			case 'date':
+			case 'datetime':
+				if (empty($value)) {
+					return "NULL";
+				} else {
+					return "'$value'";
+				}
+			case 'int':
+			case 'float':
+				if (empty($value)) {
+					return "NULL";
+				} else {
+					return $value;
+				}
+			default: return $value;
+		}
 	}
 	
 	public function _transformRow($row, $class) {
@@ -272,13 +287,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				continue;
 			}
 			if ($transformData) {
-				if (is_null($entity->$key)) {
-					$array[$value[0]] = 'NULL';
-				} else if ($value[1] == 'int' || $value[1] == 'float') {
-					$array[$value[0]] = $entity->$key;
-				} else if ($value[1] == 'varchar' || $value[1] == 'date' || $value[1] == 'datetime') {
-					$array[$value[0]] = "'".$entity->$key."'";
-				}
+				$array[$value[0]] = $this->_transformData($key, $entity->$key, $class);
 			} else {
 				$array[$value[0]] = $entity->$key;
 			}
