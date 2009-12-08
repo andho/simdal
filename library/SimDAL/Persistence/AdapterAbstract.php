@@ -78,7 +78,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$priority = $this->_getMapper()->getClassPriority();
 		
 		foreach ($priority as $class) {
-			if (!$this->deleteMultiple($class, $data)) {
+			if (!$this->deleteMultiple($class, $this->_deletes[$class])) {
 				return false;
 			}
 			//foreach ($this->_updates[$class] as $id=>$row) {
@@ -221,7 +221,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'int':
 			case 'float':
-				if (empty($value)) {
+				if ($value != 0 && empty($value)) {
 					return "NULL";
 				} else {
 					return $value;

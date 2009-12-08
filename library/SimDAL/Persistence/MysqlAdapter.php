@@ -78,6 +78,10 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function deleteMultiple($class, $keys) {
+		if (empty($keys)) {
+			return true;
+		}
+		
 		$sql = $this->_processMultipleDeleteQueries($class, $keys);
 		
 		$result = $this->execute($sql);

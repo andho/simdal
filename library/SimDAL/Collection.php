@@ -88,6 +88,15 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		$this[] = $entity;
 	}
 	
+	public function delete($entity) {
+		for ($i=0; $i<count($this->_keymap); $i++) {
+			if ($this->_data[$this->_keymap[$i]]->id == $entity->id) {
+				unset($this->_data[$this->_keymap[$i]]);
+				unset($this->_keymap[$i]);
+			}
+		}
+	}
+	
 	/**
 	 * returns Persistence adapter
 	 *
