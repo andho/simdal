@@ -91,7 +91,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			return false;
 		}
 		
-		return false;
+		return true;
 	}
 	
 	public function updateMultiple($class, $data) {
@@ -121,6 +121,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			}
 			$id = $this->lastInsertId();
 			$entity->id = $id;
+			$this->_resolveEntityDependencies($entity);
 		}
 		
 		return true;
@@ -206,6 +207,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	protected function _returnResultRows($sql, $class) {
+		$this->_connect();
+		
 		$query = mysql_query($sql, $this->_conn);
 		
 		$rows = array();
@@ -216,12 +219,18 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $this->_returnEntities($rows, $class);
 	}
 	
-	protected function _returnResultRow($sql, $class) {
+	protected function _returnResultRow($sql, $class=null) {
+		$this->_connect();
+		
 		$query = mysql_query($sql, $this->_conn);
 		if (mysql_num_rows($query) <= 0) {
 			return null;
 		}
 		$row = mysql_fetch_assoc($query);
+		
+		if (is_null($class)) {
+			return $row;
+		}
 		
 		return $this->_returnEntity($row, $class);
 	}
@@ -246,7 +255,32 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		
-		$sql = "DELETE FROM `$table` WHERE `$pk` IN (".implode(",", $keys).")";
+		foreach ($keys as $key=>$value) {
+			if (is_numeric($key)) {
+				if (!isset($where['byid'])) $where['byid'] = array();
+				$where['byid'][] = $value;
+			} else {
+				$where[$key] = $value;
+			}
+		}
+		
+		$wherecolumns = array();
+		if (isset($where['byid'])) {
+			$whereid = "`$pk` IN (".implode(",", $where['byid']).")";
+			$wherecolumns['byid'] = $whereid;
+		}
+		
+		foreach ($where as $key=>$value) {
+			if ($key == 'byid') {
+				continue;
+			}
+			$column = $this->_getMapper()->getColumn($class, $key);
+			$wherecolumns[$key] = "`{$column[0]}` IN (".implode(",", $this->_transformRow($value, $class, $key)).")";
+		}
+		
+		$where = implode(" OR ", $wherecolumns); 
+		
+		$sql = "DELETE FROM `$table` WHERE $where";
 		
 		return $sql;
 	}

@@ -72,6 +72,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		);
 	}
 	
+	public function deleteByColumn($class, $value, $column) {
+		$this->getUnitOfWork()->delete($value, $class, $column);
+	}
+	
 	public function commit() {
 		$this->_processEntities();
 		
@@ -93,6 +97,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		$this->getUnitOfWork()->clearAll();
+		
+		$this->_inserts = array();
+		$this->_updates = array();
+		$this->_deletes = array();
 		
 		return true;
 	}
@@ -130,7 +138,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	protected function _processEntities() {
-		$this->_resolveDependencies();
+		//$this->_resolveDependencies();0.
 		$this->_processInserts();
 		$this->_processUpdates();
 		$this->_processDeletes();
@@ -178,11 +186,24 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			switch ($relation[0]) {
 				case 'many-to-one':
 					$getter = 'get'.$relation[1];
+					$setter = 'get'.$relation[1];
 					$relationEntity = $entity->$getter();
 					if (!is_null($relationEntity) && $this->_isNew($relationEntity)) {
 						$this->insert($relationEntity);
+						$entity->$setter($relationEntity);
 					}
 					break;
+				case 'one-to-many':
+					$getter = 'get'.$relation[1].'s';
+					$setter = 'get'.$relation[1].'s';
+					$fk = $relation[2]['fk'];
+					$key = 'id';
+					if (isset($relation[2]['key'])) {
+						$key = $relation[2]['key'];
+					}
+					foreach ($entity->$getter() as $relationEntity) {
+						$relationEntity->$fk = $entity->id;
+					}
 			}
 		}
 	}
@@ -192,7 +213,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		foreach ($data as $class=>$rows) {
 			foreach ($rows as $id=>$row) {
 				// @todo resolve dependencies
-				$this->_deletes[$class][] = $id;
+				if (is_numeric($id)) {
+					$this->_deletes[$class][] = $id;
+				} else {
+					$this->_deletes[$class][$id] = $row;
+				}
 			}
 		}
 	}
@@ -201,6 +226,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $this->_returnResultRow($sql, $class);
 	}
 	
+	public function returnQueryAsRow($sql) {
+		return $this->_returnResultRow($sql);
+	}
+		
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
 			return "NULL";
@@ -221,7 +250,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'int':
 			case 'float':
-				if ($value != 0 && empty($value)) {
+				if ($value !== 0 && empty($value)) {
 					return "NULL";
 				} else {
 					return $value;
@@ -230,10 +259,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 	}
 	
-	public function _transformRow($row, $class) {
+	public function _transformRow($row, $class, $key=null) {
 		$data = array();
 		
-		foreach ($row as $key=>$value) {
+		foreach ($row as $column=>$value) {
+			if (!is_null($key)) {
+				$column = $key;
+			}
 			$data[] = $this->_transformData($key, $value, $class);
 		}
 		
@@ -282,7 +314,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			$class = get_class($entity);
 		}
 		
+		$pk = $this->_getMapper()->getPrimaryKey($class);
+		
 		foreach($this->_mapper->getColumnData($class) as $key=>$value) {
+			if ($pk === $key) {
+				continue;
+			}
 			if (!$includeNull && is_null($entity->$key)) {
 				continue;
 			}
@@ -321,7 +358,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	abstract public function getAdapterError();
 	
-	abstract protected function _returnResultRow($sql, $class);
+	abstract protected function _returnResultRow($sql, $class=null);
 	
 	abstract protected function _returnResultRows($sql, $class);
 	

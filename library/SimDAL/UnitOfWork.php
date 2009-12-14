@@ -34,6 +34,14 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
+		if (in_array($entity, $this->_new[$class])) {
+			return false;
+		}
+		
+		if (!array_key_exists($class, $this->_new)) {
+			$this->_new[$class] = array();
+		}
+		
 		$this->_new[$class][] = $entity;
 	}
 	
@@ -58,6 +66,11 @@ class SimDAL_UnitOfWork {
 		
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
+		
+		if (!array_key_exists($class, $this->_modified)) {
+			$this->_modified[$class] = array();
+			$this->_actual[$class] = array();
+		}
 		
 		$this->_modified[$class][$entity->id] = $entity;
 		$this->_actual[$class][$entity->id] = $actual_data;
@@ -90,12 +103,14 @@ class SimDAL_UnitOfWork {
 		
 	}
 	
-	public function delete($entity, $class=null) {
+	public function delete($entity, $class=null, $column=null) {
 		if (is_object($entity)) {
 			$class = $this->_getClass($entity);
 			$table = $this->_mapper->getTable($class);
 			
 			$this->_delete[$class][$entity->id] = $entity;
+		} else if (!is_null($column)) {
+			$this->_delete[$class][$column][] = $entity;
 		} else {
 			if (is_null($class)) {
 				return false;
@@ -271,9 +286,14 @@ class SimDAL_UnitOfWork {
 	}
 	
 	protected function _getClass($entity) {
-		$class = get_parent_class($entity);
-		if (!$class) {
-			$class = get_class($entity);
+		$class = get_class($entity);
+		if (class_exists($class, true)) {
+			return $class;
+		}
+		
+		$pclass = get_parent_class($entity);
+		if (!is_null($pclass)) {
+			$class = $pclass;
 		}
 		
 		return $class;

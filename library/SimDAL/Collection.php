@@ -64,6 +64,8 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	
 	protected $_adapter = null;
 	
+	protected $_populated = false;
+	
 	static public function setDefaultAdapter($adapter) {
 		if (!is_null($adapter) && !$adapter instanceof SimDAL_Persistence_AdapterAbstract ) {
 			return false;
@@ -104,6 +106,14 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	 */
 	public function getAdapter() {
 		return $this->_adapter;
+	}
+	
+	public function setPopulated($populated) {
+		$this->_populated = (bool)$populated;
+	}
+	
+	public function isPopulated() {
+		return $this->_populated;
 	}
 	
 }
