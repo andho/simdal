@@ -250,7 +250,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'int':
 			case 'float':
-				if ($value !== 0 && empty($value)) {
+				if ($value != 0 && empty($value)) {
 					return "NULL";
 				} else {
 					return $value;

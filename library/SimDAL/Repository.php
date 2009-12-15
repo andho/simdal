@@ -184,7 +184,7 @@ class SimDAL_Repository {
 	/**
 	 * return Adapter
 	 *
-	 * @return SimDAL_Persistence_AdapterAbstract
+	 * @return SimDAL_Persistence_MysqlAdapter
 	 */
 	public function getAdapter() {
 		return $this->_adapter;

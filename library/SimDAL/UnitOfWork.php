@@ -287,7 +287,7 @@ class SimDAL_UnitOfWork {
 	
 	protected function _getClass($entity) {
 		$class = get_class($entity);
-		if (class_exists($class, true)) {
+		if ($this->_getMapper()->classExists($class)) {
 			return $class;
 		}
 		
@@ -297,6 +297,10 @@ class SimDAL_UnitOfWork {
 		}
 		
 		return $class;
+	}
+	
+	protected function _getMapper() {
+		return $this->_mapper;
 	}
 	
 }

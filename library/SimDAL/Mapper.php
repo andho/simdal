@@ -81,4 +81,16 @@ class SimDAL_Mapper {
 		return $ordered;
 	}
 	
+	public function classExists($class) {
+		if (is_object($class)) {
+			$class = get_class($class);
+		}
+		
+		if (!array_key_exists($class, $this->map)) {
+			return false;
+		}
+		
+		return true;
+	}
+	
 }
