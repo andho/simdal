@@ -9,6 +9,12 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	private $_conn;
 	private $_transaction = false;
 	
+	static protected $_verbose = false;
+	
+	static public function setVerbose($verbose = true) {
+		self::$_verbose = $verbose;
+	}
+	
 	public function __construct($host, $username, $password, $database) {
 		parent::__construct();
 		$this->_host = $host;
@@ -100,7 +106,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			$sql = $this->_processUpdateQuery($class, $row, $id);
 			$result = $this->execute($sql);
 			if ($result === false) {
-				$this->_errorMessages['dberror'] = 'There was an error saving to database';
+				$this->_errorMessages['dberror'] = $this->getError();
 				return false;
 			}
 		}
@@ -248,7 +254,11 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function getError() {
-		return mysql_error($this->_conn);
+		if (self::$_verbose) {
+			return $this->getAdapterError();
+		} else {
+			return "There was an error saving to the database";
+		}
 	}
 
 	protected function _processMultipleDeleteQueries($class, $keys) {
