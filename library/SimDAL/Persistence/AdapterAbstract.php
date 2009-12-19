@@ -197,12 +197,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					$getter = 'get'.$relation[1].'s';
 					$setter = 'get'.$relation[1].'s';
 					$fk = $relation[2]['fk'];
-					$key = 'id';
+					$key = isset($relation[2]['key']) ? $relation[2]['key'] : 'id';
 					if (isset($relation[2]['key'])) {
 						$key = $relation[2]['key'];
 					}
 					foreach ($entity->$getter() as $relationEntity) {
-						$relationEntity->$fk = $entity->id;
+						$relationEntity->$fk = $entity->$key;
 					}
 			}
 		}
