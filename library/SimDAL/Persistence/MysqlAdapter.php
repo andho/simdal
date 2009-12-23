@@ -184,7 +184,14 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			$where[] = "`{$column[0]}` = '$value'";
 		}
 		
-		$sql = "SELECT * FROM `$table` WHERE ".implode(" AND ", $where)."$limit";
+		$sql = "SELECT * FROM `$table` WHERE ".implode(" AND ", $where);
+		if (is_numeric($limit) && $limit > 0) {
+			$sql .= " LIMIT $limit";
+		}
+		
+		if ($limit == 1) {
+			return $this->_returnResultRow($sql, $class);
+		}
 		
 		return $this->_returnResultRows($sql, $class);
 	}
