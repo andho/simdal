@@ -170,16 +170,16 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $this->_returnResultRows($sql, $class);
 	}
 	
-	public function findBy($class, array $keyValues, $limit=1) {
+	public function findBy($class, array $keyValuePairs, $limit=1) {
 		$table = $this->_getMapper()->getTable($class);
 		$this->_connect();
 		
-		if (count($keyValues) == 0) {
+		if (count($keyValuePairs) == 0) {
 			return false;
 		}
 		
 		$where = array();
-		foreach ($keyValues as $key=>$value) {
+		foreach ($keyValuePairs as $key=>$value) {
 			$column = $this->_getMapper()->getColumn($class, $key);
 			$where[] = "`{$column[0]}` = '$value'";
 		}
@@ -196,16 +196,16 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $this->_returnResultRows($sql, $class);
 	}
 	
-	public function findByEither($class, array $keyValues, $limit=1) {
+	public function findByEither($class, array $keyValuePairs, $limit=1) {
 		$table = $this->_getMapper()->getTable($class);
 		$this->_connect();
 		
-		if (count($keyValues) == 0) {
+		if (count($keyValuePairs) == 0) {
 			return false;
 		}
 		
 		$where = array();
-		foreach ($keyValues as $key=>$value) {
+		foreach ($keyValuePairs as $key=>$value) {
 			$column = $this->_getMapper()->getColumn($class, $key);
 			$where[] = "`{$column[0]}` = '$value'";
 		}

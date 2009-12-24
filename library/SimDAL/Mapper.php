@@ -28,8 +28,40 @@ class SimDAL_Mapper {
 		}
 	}
 	
+	public function hasRelation($class, $relation) {
+		if (!$this->classExists($class)) {
+			return false;
+		}
+		
+		foreach ($this->getRelations($class) as $relation) {
+			if ($relation[1] == $class) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	public function getRelations($class) {
+		if (!$this->classExists($class)) {
+			return false;
+		}
+		
 		return $this->map[$class]['associations'];
+	}
+	
+	public function getRelation($class, $relation) {
+		if (!$this->classExists($class)) {
+			return false;
+		}
+		
+		foreach ($this->map[$class]['associations'] as $relation) {
+			if ($relation[1] == $class) {
+				return $relation;
+			}
+		}
+		
+		return false;
 	}
 	
 	public function getManyToOneRelations($class) {
@@ -81,9 +113,9 @@ class SimDAL_Mapper {
 		return $ordered;
 	}
 	
-	public function classExists($class) {
+	public function classExists(&$class) {
 		if (is_object($class)) {
-			$class = get_class($class);
+			$class = $this->getClassFromEntity($class);
 		}
 		
 		if (!array_key_exists($class, $this->map)) {
@@ -91,6 +123,19 @@ class SimDAL_Mapper {
 		}
 		
 		return true;
+	}
+	
+	public function getClassFromEntity($entity) {
+		if (!is_object($entity)) {
+			throw new Exception("Invalid argument passed. Object is required");
+		}
+		
+		$class = get_parent_class($entity);
+		if (!$class) {
+			$class = get_class($entity);
+		}
+		
+		return $class;
 	}
 	
 }

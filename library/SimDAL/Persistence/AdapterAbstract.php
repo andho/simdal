@@ -282,16 +282,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	protected function _getClass($entity) {
-		if (!is_object($entity)) {
-			throw new Exception("Invalid argument passed. Object is required");
-		}
-		
-		$class = get_parent_class($entity);
-		if (!$class) {
-			$class = get_class($entity);
-		}
-		
-		return $class;
+		return $this->_getMapper()->getClassFromEntity($entity);
 	}
 	
 	protected function _isNew($entity, $query=false) {
@@ -353,6 +344,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		return $this->_errorMessages[$key];
 	}
+	
+	abstract public function findById($class, $id);
+	
+	abstract public function findByColumn($class, $value, $column, $limit=1);
+	
+	abstract public function findBy($class, $keyValuePairs, $limit=1);
+	
+	abstract public function findByEither($class, $keyValuePairs, $limit=1);
 	
 	abstract public function execute($sql);
 	

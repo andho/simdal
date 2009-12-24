@@ -287,18 +287,25 @@ class SimDAL_UnitOfWork {
 	
 	protected function _getClass($entity) {
 		$class = get_class($entity);
-		if ($this->_getMapper()->classExists($class)) {
-			return $class;
-		}
 		
-		$pclass = get_parent_class($entity);
-		if (!is_null($pclass)) {
+		while (!$this->_getMapper()->classExists($class)) {
+			$pclass = get_parent_class($entity);
+			
+			if (is_null($pclass)) {
+				break;
+			}
+			
 			$class = $pclass;
 		}
 		
 		return $class;
 	}
 	
+	/**
+	 * return the mapper
+	 *
+	 * @return SimDAL_Mapper
+	 */
 	protected function _getMapper() {
 		return $this->_mapper;
 	}
