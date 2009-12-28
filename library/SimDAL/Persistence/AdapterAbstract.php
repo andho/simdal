@@ -85,13 +85,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if (!$this->deleteMultiple($class, $this->_deletes[$class])) {
 				return false;
 			}
-			//foreach ($this->_updates[$class] as $id=>$row) {
-			if (!$this->updateMultiple($class, $this->_updates[$class])) {
-				return false;
-			}
-			//}
 			
 			if (!$this->insertMultiple($class, $this->_inserts[$class])) {
+				return false;
+			}
+			
+			if (!$this->updateMultiple($class, $this->_updates[$class])) {
 				return false;
 			}
 		}
@@ -155,12 +154,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	protected function _processUpdates() {
 		$data = $this->getUnitOfWork()->getChanges();
-		foreach ($data as $class=>$rows) {
-			foreach ($rows as $id=>$row) {
-				$entity = $this->getUnitOfWork()->getLoaded($class, $id);
+		foreach ($data as $class=>$entities) {
+			foreach ($entities as $id=>$entity) {
 				$this->_resolveEntityDependencies($entity);
 				
-				$this->_updates[$class][$id] = $row;
+				$this->_updates[$class][$id] = $entity;
 			}
 		}
 	}
@@ -184,9 +182,21 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		foreach ($relations as $relation) {
 			switch ($relation[0]) {
+				case 'one-to-one':
+					$getter1 = 'get'.$relation[2]['method'];
+					$setter1 = 'set'.$relation[2]['method'];
+					$dependent = $entity->$getter1();
+					if (!is_null($dependent) && !empty($relation[2]['dependentMethod'])) {
+						$setter3 = 'set'.$relation[2]['dependentMethod'];
+						$dependent->$setter3($entity);
+					}
+					if (!is_null($dependent) && $this->_getMapper()->compare($class, $relation[1]) == SimDAL_Mapper::COMPARE_GREATER) {
+						$this->_update($dependent);
+					}
+					break;
 				case 'many-to-one':
 					$getter = 'get'.$relation[1];
-					$setter = 'get'.$relation[1];
+					$setter = 'set'.$relation[1];
 					$relationEntity = $entity->$getter();
 					if (!is_null($relationEntity) && $this->_isNew($relationEntity)) {
 						$this->insert($relationEntity);
@@ -204,6 +214,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					foreach ($entity->$getter() as $relationEntity) {
 						$relationEntity->$fk = $entity->$key;
 					}
+					break;
 			}
 		}
 	}
@@ -300,10 +311,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
-		$class = get_parent_class($entity);
-		if (!$class) {
-			$class = get_class($entity);
-		}
+		$class = $this->_getMapper()->getClassFromEntity($entity);
 		
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		
@@ -349,9 +357,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	abstract public function findByColumn($class, $value, $column, $limit=1);
 	
-	abstract public function findBy($class, $keyValuePairs, $limit=1);
+	abstract public function findBy($class, array $keyValuePairs, $limit=1);
 	
-	abstract public function findByEither($class, $keyValuePairs, $limit=1);
+	abstract public function findByEither($class, array $keyValuePairs, $limit=1);
 	
 	abstract public function execute($sql);
 	

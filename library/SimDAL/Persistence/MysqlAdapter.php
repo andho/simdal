@@ -32,45 +32,39 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		mysql_select_db($this->_database);
 	}
 	
-	public function _insert($table, $data) {
-		$this->_connect();
-		
-		/*$multiple = false;
-		
-		if (isset($data[0]) AND is_array($data[0])) {
-			$multiple = true;
-		}
-		
-		if (!$multiple) {*/
-			$sql = "INSERT INTO `$table` (`" . implode("`,`", array_keys($data)) . "`) VALUES ('" . implode("','", $data) . "')";
-		/*} else {
-			$sql = "INSERT INTO `$table` (`" . implode("`,`", array_keys($data[0])) . "`) VALUES ";
-			
-			foreach ($data as $row) {
-				$sql .= "('" . implode("','", $row) . "'),";
-			}
-			$sql = substr($sql, 0, -1);
-		}*/
-			
-		if (!mysql_query($sql, $this->_conn)) {
+	public function _insert($entity) {
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$row = $this->_arrayForStorageFromEntity($entity, false, true);
+		$sql = $this->_processInsertQuery($class, $row);
+		if (($result = $this->execute($sql)) === false) {
+			$this->_setError($this->getAdapterError());
 			return false;
 		}
 		
-		return mysql_insert_id($this->_conn);
+		$id = $this->lastInsertId();
+		$pk = $this->_getMapper()->getPrimaryKey($class);
+		$entity->$pk = $id;
+		
+		return true;
 	}
 	
-	public function _update($table, $data, $id, $column='id') {
-		$this->_connect();
-		
-		$sql = "UPDATE `$table` SET ";
-		foreach ($data as $key=>$value) {
-			$sql .= "`$key`='$value',";
+	public function _update($entity) {
+		$row = $this->getUnitOfWork()->getChanges($entity);
+		if (count($row) <= 0) {
+			return true;
 		}
-		$sql = substr($sql, 0, -1) . " WHERE `$column`=$id";
 		
-		mysql_query($sql, $this->_conn);
-		
-		return mysql_affected_rows($this->_conn);
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$pk = $this->_getMapper()->getPrimaryKey($class);
+			
+		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
+		$result = $this->execute($sql);
+		if ($result === false) {
+			$this->_errorMessages['dberror'] = $this->getError();
+			return false;
+		}
+				
+		return true;
 	}
 	
 	public function _delete($table, $id) {
@@ -93,7 +87,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$result = $this->execute($sql);
 		
 		if ($result === false) {
-			$this->_errorMessages['dberror'] = "There was an error saving to database";
+			$this->_errorMessages['dberror'] = $this->getAdapterError();
 			return false;
 		}
 		
@@ -102,13 +96,19 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	
 	public function updateMultiple($class, $data) {
 		
-		foreach ($data as $id=>$row) {
+		foreach ($data as $id=>$entity) {
+			$row = $this->getUnitOfWork()->getChanges($entity);
+			if (count($row) <= 0) {
+				return true;
+			}
+			
 			$sql = $this->_processUpdateQuery($class, $row, $id);
 			$result = $this->execute($sql);
 			if ($result === false) {
-				$this->_errorMessages['dberror'] = $this->getError();
+				$this->_errorMessages['dberror'] = $this->getAdapterError();
 				return false;
 			}
+			$this->_resolveEntityDependencies($entity);
 		}
 		
 		return true;
@@ -128,6 +128,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			$id = $this->lastInsertId();
 			$entity->id = $id;
 			$this->_resolveEntityDependencies($entity);
+			$this->getUnitOfWork()->updateCleanEntity($entity);
 		}
 		
 		return true;
@@ -144,7 +145,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$column = $column[0];
 		$this->_connect();
 		
-		$sql = "SELECT * FROM `$table` WHERE `$column` = $id";
+		$sql = "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = $id";
 		
 		return $this->_returnResultRow($sql, $class);
 	}
@@ -308,7 +309,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$pk = $pk[0];
 		$table = $this->_getMapper()->getTable($class);
 		
-		$sql = "UPDATE `$table` SET ";
+		$sql = "UPDATE ".$this->_quoteIdentifier($table)." SET ";
 		
 		$columns = $this->_getMapper()->getColumnData($class);
 		
@@ -324,7 +325,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		
-		$sql = "INSERT INTO `$table` (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
+		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
 		return $sql;
 	}
@@ -344,6 +345,10 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	protected function _quoteIdentifier($column) {
+		$parts = explode('.', $column);
+		if (count($parts) > 0) {
+			$column = implode('`.`', $parts);
+		}
 		return "`$column`";
 	}
 	

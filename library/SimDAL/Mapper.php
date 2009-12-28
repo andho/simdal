@@ -2,14 +2,25 @@
 
 class SimDAL_Mapper {
 	
+	const COMPARE_GREATER = 0;
+	const COMPARE_LESS = 1;
+	
 	protected $map = array();
+	
+	protected $_priority = array();
+	protected $_priority2 = array();
 	
 	public function getTable($class) {
 		if (!array_key_exists($class, $this->map)) {
 			return false;
 		}
 		
-		return $this->map[$class]['table'];
+		$table = $this->map[$class]['table'];
+		if (isset($this->map[$class]['schema'])) {
+			$table = "{$this->map[$class]['schema']}.{$table}";
+		}
+		
+		return $table;
 	}
 	
 	public function getColumn($class, $key) {
@@ -33,8 +44,12 @@ class SimDAL_Mapper {
 			return false;
 		}
 		
-		foreach ($this->getRelations($class) as $relation) {
-			if ($relation[1] == $class) {
+		foreach ($this->getRelations($class) as $relation_) {
+			if ($relation_[1] == $class) {
+				return true;
+			}
+			$method = isset($relation_[2]['method']) ? $relation_[2]['method'] : null;
+			if (!is_null($method) && $method == $relation) {
 				return true;
 			}
 		}
@@ -55,9 +70,18 @@ class SimDAL_Mapper {
 			return false;
 		}
 		
-		foreach ($this->map[$class]['associations'] as $relation) {
-			if ($relation[1] == $class) {
-				return $relation;
+		foreach ($this->map[$class]['associations'] as $relation_) {
+			if ($relation_[1] == $relation) {
+				return $relation_;
+			}
+			$method = isset($relation_[2]['method']) ? $relation_[2]['method'] : null;
+			if (!is_null($method) && $method == $relation) {
+				return $relation_;
+			}
+			
+			$method = isset($relation_[2]['parentMethod']) ? $relation_[2]['parentMethod'] : null;
+			if (!is_null($method) && $method == $relation) {
+				return $relation_;
 			}
 		}
 		
@@ -110,7 +134,18 @@ class SimDAL_Mapper {
 			}
 		}
 		
+		$this->_priority = $priority;
+		$this->_priority2 = $priority2;
+		
 		return $ordered;
+	}
+	
+	public function compare($class1, $class2) {
+		if ($this->_priority2[$class1] > $this->_priority2[$class2]) {
+			return SimDAL_Mapper::COMPARE_GREATER;
+		} else {
+			return SimDAL_Mapper::COMPARE_LESS;
+		}
 	}
 	
 	public function classExists(&$class) {
@@ -130,9 +165,10 @@ class SimDAL_Mapper {
 			throw new Exception("Invalid argument passed. Object is required");
 		}
 		
-		$class = get_parent_class($entity);
-		if (!$class) {
-			$class = get_class($entity);
+		$class = get_class($entity);
+		
+		while (!array_key_exists($class, $this->map)) {
+			$class = get_parent_class($entity);
 		}
 		
 		return $class;

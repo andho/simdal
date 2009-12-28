@@ -76,31 +76,25 @@ class SimDAL_UnitOfWork {
 		$this->_actual[$class][$entity->id] = $actual_data;
 	}
 	
-	public function getChanges() {
+	public function getChanges($entity) {
+		if (is_null($entity)) {
+			return $this->_modified;
+		}
+		
 		$data = array();
 		
-		foreach ($this->_modified as $table=>$entities) {
-			foreach ($entities as $id=>$entity) {
-				if (!array_key_exists($id, $this->_actual[$table])) {
-					continue;
-				}
-				
-				if (is_object($this->_actual[$table][$id]) && $entity === $this->_actual[$table][$id]) {
-					continue;
-				}
-				
-				foreach ($this->_actual[$table][$id] as $key=>$value) {
-					if ($entity->$key == $value) {
-						continue;
-					}
-					
-					$data[$table][$id][$key] = $entity->$key;
-				}
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$pk = $this->_getMapper()->getPrimaryKey($class);
+		
+		foreach ($this->_actual[$class][$entity->$pk] as $key=>$value) {
+			if ($entity->$key == $value) {
+				continue;
 			}
+			
+			$data[$key] = $entity->$key;
 		}
 		
 		return $data;
-		
 	}
 	
 	public function delete($entity, $class=null, $column=null) {
@@ -187,8 +181,11 @@ class SimDAL_UnitOfWork {
 	
 	public function clearAll() {
 		$this->_new = array();
-		$this->_modified = array();
-		$this->_actual = array();
+		foreach ($this->_modified as $entities) {
+			foreach ($entities as $entity) {
+				$this->updateCleanEntity($entity);
+			}
+		}
 		$this->_delete = array();
 	}
 	
