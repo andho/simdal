@@ -1,6 +1,6 @@
 <?php
 
-class SimDAL_Entity {
+class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 	
 	static protected $_defaultMapper = null;
 	static protected $_defaultAdapter = null;
@@ -9,7 +9,6 @@ class SimDAL_Entity {
 	protected $_adapter = null;
 	
 	protected $_validators = array();
-	protected $_errorMessages = array();
 
 	static public function setDefaultAdapter(SimDAL_Persistence_AdapterAbstract $adapter) {
 		self::$_defaultAdapter = $adapter;
@@ -194,7 +193,7 @@ class SimDAL_Entity {
 				}
 				
 				if (!$validator->isValid($this->$property)) {
-					$this->_errorMessages[$property] = $validator->getMessages();
+					$this->_errorMessages[$property] = array_shift($validator->getMessages());
 					$valid = false;
 					return false;
 				}
@@ -219,35 +218,12 @@ class SimDAL_Entity {
 		}
 	}
 	
-	protected function _error($msg, $key=null) {
-		if (!is_null($key)) {
-			$this->_errorMessages[$key] = $msg;
-		} else {
-			$this->_errorMessages[] = $msg;
-		}
-	}
-	
-	public function getErrorMessages() {
-		return $this->_errorMessages();
-	}
-	
-	public function getErrorMessage($key) {
-		if (!array_key_exists($key, $this->_errorMessages)) {
+	public function isValid() {
+		if (!$this->_validateValidators()) {
 			return false;
 		}
-		return $this->_errorMessages[$key];
-	}
-	
-	public function isError() {
-		return count($this->_errorMessages) > 0;
-	}
-	
-	public function isValid() {
-		$valid = true;
 		
-		$valid = $this->_validateValidators();
-		
-		return $valid;
+		return true;
 	}
 	
 }

@@ -71,6 +71,10 @@ class SimDAL_Repository {
 		return $new[$this->_getTable()];
 	}*/
 	
+	public function all() {
+		return $this->getAdapter()->getAll($this->getClass());
+	}
+	
 	public function findById($id) {
 		return $this->_adapter->findById($this->getClass(), $id);
 	}

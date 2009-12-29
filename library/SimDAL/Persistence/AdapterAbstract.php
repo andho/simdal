@@ -240,6 +240,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	public function returnQueryAsRow($sql) {
 		return $this->_returnResultRow($sql);
 	}
+	
+	public function returnQueryAsRows($sql, $class) {
+		return $this->_returnResultRows($sql, $class);
+	}
 		
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
@@ -250,23 +254,23 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		switch ($column[1]) {
 			case 'varchar':
-				return "'$value'";
+				return "'".$this->escape($value)."'";
 				break;
 			case 'date':
 			case 'datetime':
 				if (empty($value)) {
 					return "NULL";
 				} else {
-					return "'$value'";
+					return "'".$this->escape($value)."'";
 				}
 			case 'float':
 			case 'int':
 				if ($value !== 0 && (empty($value) || $value == '')) {
 					return "NULL";
 				} else {
-					return $value;
+					return $this->escape($value);
 				}
-			default: return $value;
+			default: return $this->escape($value);
 		}
 	}
 	
@@ -364,6 +368,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	abstract public function execute($sql);
 	
 	abstract public function getAdapterError();
+	
+	abstract public function escape($value);
 	
 	abstract protected function _returnResultRow($sql, $class=null);
 	

@@ -134,6 +134,16 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return true;
 	}
 	
+	public function getAll($class) {
+		$table = $this->_getMapper()->getTable($class);
+		
+		$this->_connect();
+		
+		$sql = "SELECT * FROM `$table`";
+		
+		return $this->_returnResultRows($sql, $class);
+	}
+	
 	public function findById($class, $id) {
 		$entity = $this->getUnitOfWork()->getLoaded($class, $id);
 		if (!is_null($entity)) {
@@ -259,6 +269,10 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	
 	public function getAdapterError() {
 		return mysql_error($this->_conn);
+	}
+	
+	public function escape($value) {
+		return mysql_real_escape_string($value);
 	}
 	
 	public function getError() {

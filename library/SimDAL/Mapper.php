@@ -167,8 +167,8 @@ class SimDAL_Mapper {
 		
 		$class = get_class($entity);
 		
-		while (!array_key_exists($class, $this->map)) {
-			$class = get_parent_class($entity);
+		while (!array_key_exists($class, $this->map) && $class !== false) {
+			$class = get_parent_class($class);
 		}
 		
 		return $class;
