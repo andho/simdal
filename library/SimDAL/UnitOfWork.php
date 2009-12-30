@@ -76,7 +76,7 @@ class SimDAL_UnitOfWork {
 		$this->_actual[$class][$entity->id] = $actual_data;
 	}
 	
-	public function getChanges($entity) {
+	public function getChanges($entity=null) {
 		if (is_null($entity)) {
 			return $this->_modified;
 		}
@@ -118,6 +118,9 @@ class SimDAL_UnitOfWork {
 	}
 	
 	public function isLoaded($class, $id) {
+		if (!array_key_exists($class, $this->_modified)) {
+			return false;
+		}
 		return array_key_exists($id, $this->_modified[$class]);
 	}
 	

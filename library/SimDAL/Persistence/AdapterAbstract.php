@@ -215,8 +215,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					if (isset($relation[2]['key'])) {
 						$key = $relation[2]['key'];
 					}
-					foreach ($entity->$getter() as $relationEntity) {
-						$relationEntity->$fk = $entity->$key;
+					$relationEntities = $entity->$getter();
+					if (count($relationEntities) > 0) {
+						foreach ($entity->$getter() as $relationEntity) {
+							$relationEntity->$fk = $entity->$key;
+						}
 					}
 					break;
 			}
