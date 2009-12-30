@@ -1,6 +1,6 @@
 <?php
 
-class Domain extends SimDAL_ErrorTriggerer {
+class SimDAL_Domain extends SimDAL_ErrorTriggerer {
 	
 	static protected $_instance = null;
 	

@@ -95,20 +95,21 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function updateMultiple($class, $data) {
-		
-		foreach ($data as $id=>$entity) {
-			$row = $this->getUnitOfWork()->getChanges($entity);
-			if (count($row) <= 0) {
-				return true;
+		if (is_array($data) && count($data) > 0) {
+			foreach ($data as $id=>$entity) {
+				$row = $this->getUnitOfWork()->getChanges($entity);
+				if (count($row) <= 0) {
+					return true;
+				}
+				
+				$sql = $this->_processUpdateQuery($class, $row, $id);
+				$result = $this->execute($sql);
+				if ($result === false) {
+					$this->_errorMessages['dberror'] = $this->getAdapterError();
+					return false;
+				}
+				$this->_resolveEntityDependencies($entity);
 			}
-			
-			$sql = $this->_processUpdateQuery($class, $row, $id);
-			$result = $this->execute($sql);
-			if ($result === false) {
-				$this->_errorMessages['dberror'] = $this->getAdapterError();
-				return false;
-			}
-			$this->_resolveEntityDependencies($entity);
 		}
 		
 		return true;

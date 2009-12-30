@@ -114,14 +114,16 @@ class SimDAL_Mapper {
 		$highest = 0;
 		
 		foreach ($this->map as $class=>$metadata) {
-			foreach ($metadata['associations'] as $relations) { 
-				switch ($relations[0]) {
-					case 'many-to-one':
-						$i = $priority2[$relations[1]];
-						unset($priority[$priority2[$class]][$class]);
-						$priority[++$i][$class] = $class;
-						$priority2[$class] = $i;
-						break;
+			if (isset($metadata['associations'])) {
+				foreach ($metadata['associations'] as $relations) { 
+					switch ($relations[0]) {
+						case 'many-to-one':
+							$i = $priority2[$relations[1]];
+							unset($priority[$priority2[$class]][$class]);
+							$priority[++$i][$class] = $class;
+							$priority2[$class] = $i;
+							break;
+					}
 				}
 			}
 		}
