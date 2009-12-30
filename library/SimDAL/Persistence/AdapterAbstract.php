@@ -109,7 +109,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		foreach ($rows as $row) {
 			$entity = $this->_returnEntity($row, $class);
-			$pk = $this->_getMapper()->getPrimaryKey($class);
+			$entityClass = $this->_getMapper()->getClassFromEntity($entity);
+			$pk = $this->_getMapper()->getPrimaryKey($entityClass);
 			$collection[$entity->$pk] = $entity;
 		}
 		
@@ -127,8 +128,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $entity;
 	}
 	
-	protected function _entityFromArray($row, $class) {
-		$entity = new $class();
+	protected function _entityFromArray($row, &$class) {
+		$entityClass = $this->_getMapper()->getTypeMorphClass($class, $row);
+		
+		$entity = new $entityClass();
+		$class = $this->_getMapper()->getClassFromEntity($entity);
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
 			$entity->$property = $row[$column[0]];
 		}

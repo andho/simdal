@@ -167,8 +167,29 @@ class SimDAL_Mapper {
 		
 		$class = get_class($entity);
 		
+		return $this->getDomainEntityNameFromClass($class);
+	}
+	
+	public function getDomainEntityNameFromClass($class) {
 		while (!array_key_exists($class, $this->map) && $class !== false) {
 			$class = get_parent_class($class);
+		}
+		
+		return $class;
+	}
+	
+	public function getTypeMorphClass($class, $row) {
+		$class = $this->getDomainEntityNameFromClass($class);
+		
+		if (!isset($this->map[$class]['type_binding'])) {
+			return $class;
+		}
+		
+		$column = $this->map[$class]['type_binding']['column'];
+		$column = $this->map[$class]['columns'][$column][0];
+		$types = $this->map[$class]['type_binding']['types'];
+		if (array_key_exists($row[$column], $types)) {
+			$class = $types[$row[$column]];
 		}
 		
 		return $class;
