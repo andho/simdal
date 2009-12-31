@@ -148,13 +148,16 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 	}
 	
 	private function _createCollections() {
-		foreach ($this->getMapper()->getRelations($this) as $relation) {
-			if ($relation[0] == 'one-to-many') {
-				$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1) . 's';
-				if (!property_exists($this, $property)) {
-					throw new Exception("Property is not defined in the object yet a relationship exists");
+		$relations = $this->getMapper()->getRelations($this);
+		if (count($relations) > 0) {
+			foreach ($this->getMapper()->getRelations($this) as $relation) {
+				if ($relation[0] == 'one-to-many') {
+					$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1) . 's';
+					if (!property_exists($this, $property)) {
+						throw new Exception("Property is not defined in the object yet a relationship exists");
+					}
+					$this->$property = new SimDAL_Collection();
 				}
-				$this->$property = new SimDAL_Collection();
 			}
 		}
 	}
