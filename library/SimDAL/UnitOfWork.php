@@ -34,7 +34,7 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
-		if (is_array($this->_new[$class]) && in_array($entity, $this->_new[$class])) {
+		if (!array_key_exists($class, $this->_new) || !is_array($this->_new[$class]) || !in_array($entity, $this->_new[$class])) {
 			return false;
 		}
 		
@@ -129,7 +129,7 @@ class SimDAL_UnitOfWork {
 			return null;
 		}
 		if (!is_null($id)) {
-			if (!array_key_exists($id, $this->_modified[$class][$id])) {
+			if (!array_key_exists($id, $this->_modified[$class])) {
 				return null;
 			}
 			return $this->_modified[$class][$id];
