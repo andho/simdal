@@ -125,11 +125,11 @@ class SimDAL_UnitOfWork {
 	}
 	
 	public function getLoaded($class=null, $id=null) {
-		if (!is_null($class) && !array_key_exists($this->_modified[$class])) {
+		if (!is_null($class) && !array_key_exists($class, $this->_modified)) {
 			return null;
 		}
 		if (!is_null($id)) {
-			if (!array_key_exists($this->_modified[$class][$id])) {
+			if (!array_key_exists($id, $this->_modified[$class][$id])) {
 				return null;
 			}
 			return $this->_modified[$class][$id];

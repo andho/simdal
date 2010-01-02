@@ -134,6 +134,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$entity = new $entityClass();
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
+			if (!property_exists($entity, $property)) {
+				continue;
+			}
 			$entity->$property = $row[$column[0]];
 		}
 		
