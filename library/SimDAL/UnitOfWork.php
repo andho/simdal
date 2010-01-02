@@ -34,7 +34,7 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
-		if (in_array($entity, $this->_new[$class])) {
+		if (is_array($this->_new[$class]) && in_array($entity, $this->_new[$class])) {
 			return false;
 		}
 		
@@ -125,10 +125,16 @@ class SimDAL_UnitOfWork {
 	}
 	
 	public function getLoaded($class=null, $id=null) {
-		if (!is_null($class) && !is_null($id)) {
+		if (!is_null($class) && !array_key_exists($this->_modified[$class])) {
+			return null;
+		}
+		if (!is_null($id)) {
+			if (!array_key_exists($this->_modified[$class][$id])) {
+				return null;
+			}
 			return $this->_modified[$class][$id];
 		}
-		if (!is_null($class) && is_null($id)) {
+		if (is_null($id)) {
 			return $this->_modified[$class];
 		}
 		return $this->_modified;

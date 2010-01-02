@@ -99,7 +99,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			foreach ($data as $id=>$entity) {
 				$row = $this->getUnitOfWork()->getChanges($entity);
 				if (count($row) <= 0) {
-					return true;
+					continue;
 				}
 				
 				$sql = $this->_processUpdateQuery($class, $row, $id);
@@ -247,7 +247,9 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	protected function _returnResultRow($sql, $class=null) {
 		$this->_connect();
 		
-		$query = mysql_query($sql, $this->_conn);
+		if (!($query = mysql_query($sql, $this->_conn))) {
+			return false;
+		}
 		if (mysql_num_rows($query) <= 0) {
 			return null;
 		}

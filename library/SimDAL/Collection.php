@@ -19,7 +19,13 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		return ++$this->_position;
 	}
 	public function valid() {
-		return isset($this->_data[$this->_keymap[$this->key()]]);
+		if (!array_key_exists($this->_keymap[$this->key()])) {
+			return false;
+		}
+		if (!array_key_exists($this->_data[$this->_keymap[$this->key()]])) {
+			return false;
+		}
+		return true;
 	}
 	// end of iterator implementation
 	// countable implementation
