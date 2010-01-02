@@ -137,7 +137,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if (!property_exists($entity, $property)) {
 				continue;
 			}
-			if (!property_exists($column[0], $row)) {
+			if (!array_key_exists($column[0], $row)) {
 				continue;
 			}
 			$entity->$property = $row[$column[0]];
