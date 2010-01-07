@@ -15,12 +15,12 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		self::$_verbose = $verbose;
 	}
 	
-	public function __construct($host, $username, $password, $database) {
+	public function __construct(array $conf) {
 		parent::__construct();
-		$this->_host = $host;
-		$this->_username = $username;
-		$this->_password = $password;
-		$this->_database = $database;
+		$this->_host = $conf['host'];
+		$this->_username = $conf['username'];
+		$this->_password = $conf['password'];
+		$this->_database = $conf['database'];
 	}
 	
 	protected function _connect() {
@@ -30,22 +30,6 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		
 		$this->_conn = mysql_pconnect($this->_host, $this->_username, $this->_password);
 		mysql_select_db($this->_database);
-	}
-	
-	public function _insert($entity) {
-		$class = $this->_getMapper()->getClassFromEntity($entity);
-		$row = $this->_arrayForStorageFromEntity($entity, false, true);
-		$sql = $this->_processInsertQuery($class, $row);
-		if (($result = $this->execute($sql)) === false) {
-			$this->_setError($this->getAdapterError());
-			return false;
-		}
-		
-		$id = $this->lastInsertId();
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$entity->$pk = $id;
-		
-		return true;
 	}
 	
 	public function _update($entity) {
@@ -77,158 +61,42 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return mysql_affected_rows($this->_conn);
 	}
 	
-	public function deleteMultiple($class, $keys) {
-		if (empty($keys)) {
-			return true;
-		}
-		
-		$sql = $this->_processMultipleDeleteQueries($class, $keys);
-		
-		$result = $this->execute($sql);
-		
-		if ($result === false) {
-			$this->_errorMessages['dberror'] = $this->getAdapterError();
-			return false;
-		}
-		
-		return true;
-	}
-	
-	public function updateMultiple($class, $data) {
-		if (is_array($data) && count($data) > 0) {
-			foreach ($data as $id=>$entity) {
-				$row = $this->getUnitOfWork()->getChanges($entity);
-				if (count($row) <= 0) {
-					continue;
-				}
-				
-				$sql = $this->_processUpdateQuery($class, $row, $id);
-				$result = $this->execute($sql);
-				if ($result === false) {
-					$this->_errorMessages['dberror'] = $this->getAdapterError();
-					return false;
-				}
-				$this->_resolveEntityDependencies($entity);
-			}
-		}
-		
-		return true;
-	}
-	
-	public function insertMultiple($class, $data) {
-		if (!is_array($data) || count($data) <= 0) {
-			return true;
-		}
- 		foreach ($data as $entity) {
-			$row = $this->_arrayForStorageFromEntity($entity, false, true);
-			$sql = $this->_processInsertQuery($class, $row);
-			if (($result = $this->execute($sql)) === false) {
-				$this->_setError($this->getAdapterError());
-				return false;
-			}
-			$id = $this->lastInsertId();
-			$entity->id = $id;
-			$this->_resolveEntityDependencies($entity);
-			$this->getUnitOfWork()->updateCleanEntity($entity);
-		}
-		
-		return true;
-	}
-	
-	public function getAll($class) {
+	protected function _processGetAllQuery($class) {
 		$table = $this->_getMapper()->getTable($class);
 		
-		$this->_connect();
-		
-		$sql = "SELECT * FROM `$table`";
-		
-		return $this->_returnResultRows($sql, $class);
+		return "SELECT * FROM `$table`";
 	}
 	
-	public function findById($class, $id) {
-		$entity = $this->getUnitOfWork()->getLoaded($class, $id);
-		if (!is_null($entity)) {
-			return $entity;
-		}
-		$table = $this->_getMapper()->getTable($class);
-		$property = $this->_getMapper()->getPrimaryKey($class);
-		$column = $this->_getMapper()->getColumn($class, $property);
-		$column = $column[0];
-		$this->_connect();
-		
-		$sql = "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = $id";
-		
-		return $this->_returnResultRow($sql, $class);
+	protected function _processFindByIdQuery($table, $column, $id) {
+		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = $id";
 	}
 	
-	public function findByColumn($class, $value, $column, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$property = $this->_getMapper()->getColumn($class, $column);
-		$this->_connect();
-		
-		if (is_string($value)) {
-			$value = "'$value'";
-		}
-		
-		$sql = "SELECT * FROM `$table` WHERE `{$property[0]}` = $value";
+	protected function _processFindByColumnQuery($table, $key, $value, $limit) {
+		$sql = "SELECT * FROM `$table` WHERE `{$key}` = $value";
 		if (is_numeric($limit) && $limit > 0) {
 			$sql .= " LIMIT $limit";
 		}
 		
-		if ($limit == 1) {
-			return $this->_returnResultRow($sql, $class);
-		}
-		
-		return $this->_returnResultRows($sql, $class);
+		return $sql;
 	}
 	
-	public function findBy($class, array $keyValuePairs, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$this->_connect();
-		
-		if (count($keyValuePairs) == 0) {
-			return false;
-		}
-		
-		$where = array();
-		foreach ($keyValuePairs as $key=>$value) {
-			$column = $this->_getMapper()->getColumn($class, $key);
-			$where[] = "`{$column[0]}` = '$value'";
-		}
-		
+	protected function _processFindByQuery($table, $where, $limit) {
 		$sql = "SELECT * FROM `$table` WHERE ".implode(" AND ", $where);
 		if (is_numeric($limit) && $limit > 0) {
 			$sql .= " LIMIT $limit";
 		}
 		
-		if ($limit == 1) {
-			return $this->_returnResultRow($sql, $class);
-		}
-		
-		return $this->_returnResultRows($sql, $class);
+		return $sql;
 	}
 	
-	public function findByEither($class, array $keyValuePairs, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$this->_connect();
-		
-		if (count($keyValuePairs) == 0) {
-			return false;
-		}
-		
-		$where = array();
-		foreach ($keyValuePairs as $key=>$value) {
-			$column = $this->_getMapper()->getColumn($class, $key);
-			$where[] = "`{$column[0]}` = '$value'";
-		}
-		
+	protected function _processFindByEither($table, $where, $limit) {
 		if (!is_null($limit)) {
 			$limit = " LIMIT $limit";
 		}
 		
 		$sql = "SELECT * FROM `$table` WHERE ".implode(" OR ", $where)."$limit";
 		
-		return $this->_returnResultRows($sql, $class);
+		return $sql;
 	}
 	
 	protected function _returnResultRows($sql, $class) {
@@ -240,6 +108,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		while ($row = mysql_fetch_assoc($query)) {
 			$rows[] = $row;
 		}
+		
+		mysql_free_result($query);
 		
 		return $this->_returnEntities($rows, $class);
 	}
@@ -258,6 +128,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		if (is_null($class)) {
 			return $row;
 		}
+		
+		mysql_free_result($query);
 		
 		return $this->_returnEntity($row, $class);
 	}
@@ -286,60 +158,13 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		}
 	}
 
-	protected function _processMultipleDeleteQueries($class, $keys) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$table = $this->_getMapper()->getTable($class);
+	protected function _whereRange($key, $values) {
+		$where = "`{$key}` IN (".implode(",", $values).")";
 		
-		foreach ($keys as $key=>$value) {
-			if (is_numeric($key)) {
-				if (!isset($where['byid'])) $where['byid'] = array();
-				$where['byid'][] = $value;
-			} else {
-				$where[$key] = $value;
-			}
-		}
-		
-		$wherecolumns = array();
-		if (isset($where['byid'])) {
-			$whereid = "`$pk` IN (".implode(",", $where['byid']).")";
-			$wherecolumns['byid'] = $whereid;
-		}
-		
-		foreach ($where as $key=>$value) {
-			if ($key == 'byid') {
-				continue;
-			}
-			$column = $this->_getMapper()->getColumn($class, $key);
-			$wherecolumns[$key] = "`{$column[0]}` IN (".implode(",", $this->_transformRow($value, $class, $key)).")";
-		}
-		
-		$where = implode(" OR ", $wherecolumns); 
-		
-		$sql = "DELETE FROM `$table` WHERE $where";
-		
-		return $sql;
-	}
-	
-	protected function _processUpdateQuery($class, $data, $id) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$pk = $this->_getMapper()->getColumn($class, $pk);
-		$pk = $pk[0];
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "UPDATE ".$this->_quoteIdentifier($table)." SET ";
-		
-		$columns = $this->_getMapper()->getColumnData($class);
-		
-		foreach ($data as $key=>$value) {
-			$sql .= $this->_quoteIdentifier($columns[$key][0])." = ".$this->_transformData($key, $value, $class) . ",";
-		}
-		$sql = substr($sql,0,-1) . " WHERE `$pk`=$id";
-		
-		return $sql;
+		return $where;
 	}
 	
 	protected function _processInsertQuery($class, $data) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$table = $this->_getMapper()->getTable($class);
 		
 		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
@@ -347,18 +172,16 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $sql;
 	}
 	
-	protected function _processMultipleInsertQueries($class, $data) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "INSERT INTO `$table` (`".implode('`,`',$this->_getMapper()->getColumnData($class))."`) VALUES ";
-		
-		foreach ($data as $row) {
-			$sql .= "(" . implode(',', $this->_transaformRow($row, $class)) . "),";
-		}
-		$sql = substr($sql,0,-1);
-		
-		return $sql;
+	public function startTransaction() {
+		return;
+	}
+	
+	public function commitTransaction() {
+		return;
+	}
+	
+	public function rollbackTransaction() {
+		return;
 	}
 	
 	protected function _quoteIdentifier($column) {
@@ -366,6 +189,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		if (count($parts) > 0) {
 			$column = implode('`.`', $parts);
 		}
+		
 		return "`$column`";
 	}
 	

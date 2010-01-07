@@ -1,10 +1,12 @@
 <?php
 
-class SimDAL_Repository {
+abstract class SimDAL_Repository {
 	
 	static protected $_defaultAdapter = null;
 	
 	static protected $_defaultMapper = null;
+
+	abstract static public function getInstance();
 	
 	protected $_adapter = null;
 	
@@ -28,6 +30,14 @@ class SimDAL_Repository {
 		}
 		
 		self::$_defaultMapper = $mapper;
+	}
+	
+	public function setAdapter($adapter) {
+		$this->_adapter = $adapter;
+	}
+	
+	public function setMapper($mapper) {
+		$this->_mapper = $mapper;
 	}
 	
 	public function __construct($adapter=null, $mapper=null) {

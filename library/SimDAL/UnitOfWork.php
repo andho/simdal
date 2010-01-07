@@ -34,7 +34,11 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getClass($entity);
 		$table = $this->_mapper->getTable($class);
 		
-		if (!array_key_exists($class, $this->_new) || !is_array($this->_new[$class]) || !in_array($entity, $this->_new[$class])) {
+		if (!array_key_exists($class, $this->_new)) {
+			$this->_new[$class] = array();
+		}
+		
+		if (in_array($entity, $this->_new[$class])) {
 			return false;
 		}
 		
