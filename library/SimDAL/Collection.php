@@ -65,6 +65,7 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		unset($this->_data[$offset]);
 		array_slice($this->_keymap, $key);
 	}
+	// end of ArrayAccess implementation
 	
 	static protected $_defaultAdapter = null;
 	
@@ -120,6 +121,14 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	
 	public function isPopulated() {
 		return $this->_populated;
+	}
+	
+	public function get($position) {
+		if (!array_key_exists($position, $this->_keymap)) {
+			return false;
+		}
+		
+		return $this->_data[$this->_keymap[$position]];
 	}
 	
 }

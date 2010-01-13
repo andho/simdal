@@ -182,7 +182,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				continue;
 			}
 			$column = $this->_getMapper()->getColumn($class, $key);
-			$wherecolumns[$key] = $this->_whereRange($column[0], $this->_transformData($value, $class, $key));
+			$wherecolumns[$key] = $this->_whereRange($column[0], $this->_transformRow($value, $class, $key));
 		}
 		
 		$where = implode(" OR ", $wherecolumns); 
@@ -367,7 +367,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _returnEntity($row, $class) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$entity = $this->_entityFromArray($row, $class);
-		if ($this->getUnitOfWork()->isLoaded($class, $entity->id)) {
+		if ($this->getUnitOfWork()->isLoaded($class, $entity->$pk)) {
 			return $this->getUnitOfWork()->getLoaded($class, $entity->id);
 		}
 		

@@ -104,6 +104,10 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		
 		$query = mysql_query($sql, $this->_conn);
 		
+		if ($query === false) {
+			return false;
+		}
+		
 		$rows = array();
 		while ($row = mysql_fetch_assoc($query)) {
 			$rows[] = $row;
@@ -159,6 +163,9 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 
 	protected function _whereRange($key, $values) {
+		if (!is_array($values) && is_scalar($values)) {
+			$values = array($values);
+		}
 		$where = "`{$key}` IN (".implode(",", $values).")";
 		
 		return $where;

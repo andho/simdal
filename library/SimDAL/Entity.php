@@ -35,7 +35,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 				$key = isset($relation[2]['key']) ? $relation[2]['key'] : 'id';
 				
 				if ($relation[0] == 'many-to-one') {
-					$relation_pk = $this->getMapper()->getPrimaryKey($relation[1]);
+					$relation_key = $this->getMapper()->getPrimaryKey($relation[1]);
 					$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1);
 					
 					if (is_null($this->$property) && is_null($this->$fk)) {
@@ -45,10 +45,10 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 					if (is_null($this->$property)) {
 						if ($key == 'id') {
 							$this->$property = $this->getAdapter()->findById($relation[1], $this->$fk);
-							$this->$fk = $this->$property->$relation_pk;
+							$this->$fk = $this->$property->$key;
 						} else {
 							$this->$property = $this->getAdapter()->findByColumn($relation[1], $this->$fk, $key);
-							$this->$fk = $this->$property->$relation_pk;
+							$this->$fk = $this->$property->$key;
 						}
 					}
 				} else if ($relation[0] == 'one-to-many') {
@@ -59,7 +59,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 						$this->$property = $this->getAdapter()->findByColumn($relation[1], $this->$key, $fk, null);
 					}
 				} else if ($relation[0] == 'one-to-one') {
-					$relation_pk = $this->getMapper()->getPrimaryKey($relation[1]);
+					$relation_key = $this->getMapper()->getPrimaryKey($relation[1]);
 					$property = $relation[2]['method'];
 					$property = strtolower( substr($property,0,1) ) . substr($property,1);
 					
@@ -75,7 +75,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 							$this->$property->$setter($this);
 						} else {
 							$this->$property = $this->getAdapter()->findByColumn($relation[1], $this->$fk, $key);
-							$this->$fk = $this->$property->$relation_pk;
+							$this->$fk = $this->$property->$relation_key;
 							$this->$property->$setter($this);
 						}
 					}
@@ -154,7 +154,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 				if ($relation[0] == 'one-to-many') {
 					$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1) . 's';
 					if (!property_exists($this, $property)) {
-						throw new Exception("Property is not defined in the object yet a relationship exists");
+						throw new Exception("Property '$property' is not defined in the object of type '".get_class($this)."' yet a relationship exists");
 					}
 					$this->$property = new SimDAL_Collection();
 				}
@@ -213,6 +213,9 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 		
 		foreach ($validators as $property=>$validators2) {
 			foreach ($validators2 as $validator) {
+				if (!array_key_exists($property, $this->_validators)) {
+					$this->_validators[$property] = array();
+				}
 				if (in_array($validator, $this->_validators[$property])) {
 					continue;
 				}
@@ -227,6 +230,19 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 		}
 		
 		return true;
+	}
+	
+	public function setData($data) {
+		if (!is_array($data) && !is_object($data)) {
+			return false;
+		}
+		
+		foreach ($data as $key=>$value) {
+			if (!property_exists($this, $key)) {
+				continue;
+			}
+			$this->$key = $value;
+		}
 	}
 	
 }
