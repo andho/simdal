@@ -173,7 +173,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		$wherecolumns = array();
 		if (isset($where['byid'])) {
-			$whereid = $this->_whereRange($pk, $where['byid']);
+			$column = $this->_getMapper()->getColumn($class, $pk);
+			$whereid = $this->_whereRange($column[0], $where['byid']);
 			$wherecolumns['byid'] = $whereid;
 		}
 		
