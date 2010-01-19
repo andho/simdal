@@ -140,6 +140,17 @@ class SimDAL_UnitOfWork {
 		return $this->_modified;
 	}
 	
+	public function getActual($class, $id) {
+		if (!array_key_exists($class, $this->_modified)) {
+			return null;
+		}
+		if (!array_key_exists($id, $this->_modified[$class])) {
+			return null;
+		}
+		
+		return $this->_modified[$class][$id];
+	}
+	
 	public function revert($entity) {
 		$this->_revertDeleted($entity);
 		

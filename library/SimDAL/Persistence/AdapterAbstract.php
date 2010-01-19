@@ -321,17 +321,17 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$commit = true;
 		
 		foreach ($priority as $class) {
-			if (!$this->deleteMultiple($class, $this->_deletes[$class])) {
+			if (array_key_exists($class, $this->_deletes) && !$this->deleteMultiple($class, $this->_deletes[$class])) {
 				$commit = false;
 				break;
 			}
 			
-			if (!$this->insertMultiple($class, $this->_inserts[$class])) {
+			if (array_key_exists($class, $this->_inserts) && !$this->insertMultiple($class, $this->_inserts[$class])) {
 				$commit = false;
 				break;
 			}
 			
-			if (!$this->updateMultiple($class, $this->_updates[$class])) {
+			if (array_key_exists($class, $this->_updates) && !$this->updateMultiple($class, $this->_updates[$class])) {
 				$commit = false;
 				break;
 			}
@@ -464,6 +464,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				case 'one-to-many':
 					$getter = 'get'.$relation[1].'s';
 					$setter = 'get'.$relation[1].'s';
+					if (!isset($relation[2]['fk'])) {
+						throw new Exception("Foriegn Key not set for {$relation[0]} relation '{$relation[1]}' in '$class'");
+					}
 					$fk = $relation[2]['fk'];
 					
 					$key = isset($relation[2]['key']) ? $relation[2]['key'] : 'id';
@@ -473,6 +476,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					$relationEntities = $entity->$getter();
 					if (count($relationEntities) > 0) {
 						foreach ($entity->$getter() as $relationEntity) {
+							$pk = $this->_getMapper()->getPrimaryKey($class);
+							$actual = $this->getUnitOfWork()->getActual($class, $entity->$pk);
+							if ($entity->$key == $actual->$key) {
+								continue;
+							}
+							if ($relationEntity->$fk != $actual->key) {
+								continue;
+							}
 							$relationEntity->$fk = $entity->$key;
 						}
 					}
