@@ -478,10 +478,15 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 						foreach ($entity->$getter() as $relationEntity) {
 							$pk = $this->_getMapper()->getPrimaryKey($class);
 							$actual = $this->getUnitOfWork()->getActual($class, $entity->$pk);
-							if ($entity->$key == $actual->$key) {
-								continue;
+							if (!is_null($actual)) {
+								if ($entity->$key == $actual->$key) {
+									continue;
+								}
+								if ($relationEntity->$fk != $actual->key) {
+									continue;
+								}
 							}
-							if ($relationEntity->$fk != $actual->key) {
+							if (is_null($actual) && $relationEntity->$fk != -1) {
 								continue;
 							}
 							$relationEntity->$fk = $entity->$key;
@@ -538,7 +543,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'float':
 			case 'int':
-				if ((int)$value !== 0 && (empty($value) || $value == '')) {
+				if ($value !== 0 && (empty($value) || $value == '')) {
 					return "NULL";
 				} else {
 					return $this->escape($value);
