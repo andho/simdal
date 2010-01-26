@@ -486,7 +486,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 									continue;
 								}
 							}
-							if (is_null($actual) && $relationEntity->$fk != -1) {
+							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk !== null) {
 								continue;
 							}
 							$relationEntity->$fk = $entity->$key;
@@ -543,7 +543,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'float':
 			case 'int':
-				if ($value !== 0 && (empty($value) || $value == '')) {
+				if ($value != 0 && (empty($value) || $value == '')) {
 					return "NULL";
 				} else {
 					return $this->escape($value);

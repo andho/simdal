@@ -17,6 +17,10 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$this->_database = $conf['database'];
 	}
 	
+	public function __destruct() {
+		mysqli_rollback($this->_conn);
+	}
+	
 	protected function _connect() {
 		if (!is_null($this->_conn)) {
 			return;
@@ -24,6 +28,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		
 		$this->_conn = mysqli_connect($this->_host, $this->_username, $this->_password);
 		mysqli_select_db($this->_conn, $this->_database);
+		mysqli_autocommit($this->_conn, false);
 	}
 	
 	protected function _processGetAllQuery($class) {
@@ -76,6 +81,10 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$this->_connect();
 		
 		$query = mysqli_query($this->_conn, $sql, MYSQLI_STORE_RESULT);
+		
+		if ($query === false) {
+			return $this->_returnEntities(array(), $class);
+		}
 		
 		$rows = array();
 		while ($row = mysqli_fetch_assoc($query)) {

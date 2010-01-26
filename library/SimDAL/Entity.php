@@ -8,6 +8,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 	protected $_mapper = null;
 	protected $_adapter = null;
 	
+	protected $_messages = array();
 	protected $_validators = array();
 
 	static public function setDefaultAdapter(SimDAL_Persistence_AdapterAbstract $adapter) {
@@ -237,12 +238,35 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 			return false;
 		}
 		
+		$class = $this->getMapper()->getClassFromEntity($this);
+		$pk = $this->getMapper()->getPrimaryKey($class);
+		$pkcolumn = $this->getMapper()->getColumn($class, $pk);
+		
 		foreach ($data as $key=>$value) {
 			if (!property_exists($this, $key)) {
 				continue;
 			}
+			if ($key == $pk && $pkcolumn[2]['autoIncrement'] == true) {
+				continue;
+			}
 			$this->$key = $value;
 		}
+	}
+	
+	protected function _message($msg, $key=null) {
+		if (!is_null($key)) {
+			$this->_messages[$key] = $msg;
+		} else {
+			$this->_messages[] = $msg;
+		}
+	}
+	
+	public function getMessages() {
+		return $this->_messages;
+	}
+	
+	public function hasMessages() {
+		return count($this->_messages) > 0;
 	}
 	
 }
