@@ -38,7 +38,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	protected function _processFindByIdQuery($table, $column, $id) {
-		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = $id";
+		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = '$id'";
 	}
 	
 	protected function _processFindByColumnQuery($table, $key, $value, $limit) {

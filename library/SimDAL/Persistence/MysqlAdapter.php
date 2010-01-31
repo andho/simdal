@@ -32,25 +32,6 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		mysql_select_db($this->_database);
 	}
 	
-	public function _update($entity) {
-		$row = $this->getUnitOfWork()->getChanges($entity);
-		if (count($row) <= 0) {
-			return true;
-		}
-		
-		$class = $this->_getMapper()->getClassFromEntity($entity);
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-			
-		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
-		$result = $this->execute($sql);
-		if ($result === false) {
-			$this->_errorMessages['dberror'] = $this->getError();
-			return false;
-		}
-				
-		return true;
-	}
-	
 	public function _delete($table, $id) {
 		$this->_connect();
 		
@@ -68,7 +49,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	protected function _processFindByIdQuery($table, $column, $id) {
-		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = $id";
+		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = '$id'";
 	}
 	
 	protected function _processFindByColumnQuery($table, $key, $value, $limit) {
