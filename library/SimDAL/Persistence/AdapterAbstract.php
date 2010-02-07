@@ -457,6 +457,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$class = $this->_getClass($entity);
 		$relations = $this->_getMapper()->getRelations($class);
 		
+		if (!is_array($relations) || count($relations) <= 0) {
+			return;
+		}
+		
 		foreach ($relations as $relation) {
 			switch ($relation[0]) {
 				case 'one-to-one':
