@@ -123,7 +123,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$where = array();
 		foreach ($keyValuePairs as $key=>$value) {
 			$column = $this->_getMapper()->getColumn($class, $key);
-			$where[] = "`{$column[0]}` = '$value'";
+			//$where[] = "`{$column[0]}` = '$value'";
+			if (is_null($value)) {
+				$where[] = $this->_quoteIdentifier($column[0]) . " IS NULL";
+			} else {
+				$where[] = $this->_quoteIdentifier($column[0]) . " = " . $this->_transformData($key, $value, $class);
+			}
 		}
 		
 		$sql = $this->_processFindByQuery($table, $where, $limit);
@@ -545,6 +550,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	public function returnQueryAsRows($sql, $class) {
 		return $this->_returnResultRows($sql, $class);
 	}
+	
+	public function returnQueryAsObjects($sql, $class) {
+		return $this->_returnResultRows($sql, $class);
+	}
 		
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
@@ -673,5 +682,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	abstract protected function _returnResultRow($sql, $class=null);
 	
 	abstract protected function _returnResultRows($sql, $class);
+	
+	abstract protected function _quoteIdentifier($column);
 	
 }

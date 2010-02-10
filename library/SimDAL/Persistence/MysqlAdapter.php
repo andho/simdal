@@ -28,7 +28,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			return true;
 		}
 		
-		$this->_conn = mysql_pconnect($this->_host, $this->_username, $this->_password);
+		$this->_conn = mysql_connect($this->_host, $this->_username, $this->_password);
 		mysql_select_db($this->_database);
 	}
 	
@@ -83,7 +83,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	protected function _returnResultRows($sql, $class) {
 		$this->_connect();
 		
-		$query = mysql_query($sql, $this->_conn);
+		$query = mysql_query($sql, $this->_conn) or die(mysql_error($this->_conn));
 		
 		if ($query === false) {
 			return false;
