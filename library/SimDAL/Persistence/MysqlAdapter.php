@@ -23,6 +23,13 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$this->_database = $conf['database'];
 	}
 	
+	public function __destruct() {
+		if (!is_null($this->_conn)) {
+			mysql_close($this->_conn);
+			$this->_conn = null;
+		}
+	}
+	
 	protected function _connect() {
 		if (!is_null($this->_conn)) {
 			return true;

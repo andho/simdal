@@ -18,7 +18,11 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	public function __destruct() {
-		mysqli_rollback($this->_conn);
+		if (!is_null($this->_conn)) {
+			mysqli_rollback($this->_conn);
+			mysqli_close($this->_conn);
+			$this->_conn = null;
+		}
 	}
 	
 	protected function _connect() {
@@ -100,7 +104,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$this->_connect();
 		
 		if (!($query = mysqli_query($this->_conn, $sql))) {
-			return false;
+			return null;
 		}
 		if (mysqli_num_rows($query) <= 0) {
 			return null;

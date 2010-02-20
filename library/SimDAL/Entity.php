@@ -153,7 +153,12 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 		if (count($relations) > 0) {
 			foreach ($this->getMapper()->getRelations($this) as $relation) {
 				if ($relation[0] == 'one-to-many') {
-					$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1) . 's';
+					if (!isset($relation[2]['method'])) {
+						$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1) . 's';
+					} else {
+						$property = $relation[2]['method'];
+					}
+					
 					if (!property_exists($this, $property)) {
 						throw new Exception("Property '$property' is not defined in the object of type '".get_class($this)."' yet a relationship exists");
 					}
