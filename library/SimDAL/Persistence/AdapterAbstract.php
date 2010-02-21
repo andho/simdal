@@ -402,6 +402,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	protected function _entityFromArray($row, &$class) {
 		$entityClass = $this->_getMapper()->getTypeMorphClass($class, $row);
+		if ($entityClass == $class) {
+			$entityClass = $this->_getMapper()->getDescendantClass($class, $row);
+		}
 		
 		$entity = new $entityClass();
 		$class = $this->_getMapper()->getClassFromEntity($entity);

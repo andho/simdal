@@ -197,4 +197,27 @@ class SimDAL_Mapper {
 		return $class;
 	}
 	
+	public function getDescendantClass($class, $row) {
+		$class = $this->getDomainEntityNameFromClass($class);
+		
+		if (!isset($this->map[$class]['descendants']) || !isset($this->map[$class]['descendantTypeField']) || !isset($this->map[$class]['descendantClassNamePrefix'])) {
+			return $class;
+		}
+		
+		$type_field = $this->map[$class]['descendantTypeField'];
+		$prefix = isset($this->map[$class]['descendantClassNamePrefix']) ? $this->map[$class]['descendantClassNamePrefix'] : false; 
+		foreach ($this->map[$class]['descendants'] as $descendantType=>$descendant) {
+			if ($prefix === true) {
+				$prefix = $class . '_';
+			} else if ($prefix === false) {
+				$pregix = '';
+			}
+			if (strtolower($prefix.$row[$type_field]) == strtolower($descendantType)) {
+				return $descendantType;
+			}
+		}
+		
+		return $class;
+	}
+	
 }
