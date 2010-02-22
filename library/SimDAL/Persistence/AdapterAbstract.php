@@ -578,7 +578,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				}
 			case 'float':
 			case 'int':
-				if ($value != 0 && (empty($value) || $value == '')) {
+				if ($value === '' || ($value != 0 && (empty($value) && $value == ''))) {
 					return "NULL";
 				} else {
 					return $this->escape($value);
