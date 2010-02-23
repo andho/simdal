@@ -86,6 +86,10 @@ class SimDAL_UnitOfWork {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		
+		if (!is_array($this->_actual[$class][$entity->$pk]) || count($this->_actual[$class][$entity->$pk]) <= 0) {
+			return $data;
+		}
+		
 		foreach ($this->_actual[$class][$entity->$pk] as $key=>$value) {
 			if ($entity->$key == $value) {
 				continue;
