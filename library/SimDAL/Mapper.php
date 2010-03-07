@@ -220,4 +220,16 @@ class SimDAL_Mapper {
 		return $class;
 	}
 	
+	public function getRelationMethod($relation) {
+		if (isset($relation[2]['method'])) {
+			return ucfirst($relation[2]['method']);
+		}
+		$method = $relation[1];
+		if ($relation[0] == 'one-to-many') {
+			$method .= 's';
+		}
+		
+		return $method;
+	}
+	
 }

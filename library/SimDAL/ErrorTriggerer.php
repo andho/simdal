@@ -23,6 +23,17 @@ class SimDAL_ErrorTriggerer {
 		return $this->_errorMessages[$key];
 	}
 	
+	public function getOrphanErrorMessages() {
+		$msgs = array();
+		foreach ($this->_errorMessages as $key=>$msg) {
+			if (is_numeric($key)) {
+				$msgs[] = $msg;
+			}
+		}
+		
+		return $msgs;
+	}
+	
 	public function isError() {
 		return count($this->_errorMessages) > 0;
 	}

@@ -87,6 +87,25 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $sql;
 	}
 	
+	protected function _returnResultRowsAsArray($sql) {
+		$this->_connect();
+		
+		$query = mysql_query($sql, $this->_conn) or die(mysql_error($this->_conn));
+		
+		if ($query === false) {
+			return false;
+		}
+		
+		$rows = array();
+		while ($row = mysql_fetch_assoc($query)) {
+			$rows[] = $row;
+		}
+		
+		mysql_free_result($query);
+		
+		return $rows;
+	}
+	
 	protected function _returnResultRows($sql, $class) {
 		$this->_connect();
 		

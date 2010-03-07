@@ -85,6 +85,11 @@ abstract class SimDAL_Repository {
 		return $this->getAdapter()->getAll($this->getClass());
 	}
 	
+	/**
+	 * 
+	 * @param int $id
+	 * @return Claim
+	 */
 	public function findById($id) {
 		return $this->_adapter->findById($this->getClass(), $id);
 	}

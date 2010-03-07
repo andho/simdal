@@ -386,6 +386,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			$collection[$entity->$pk] = $entity;
 		}
 		
+		$collection->setPopulated(true);
+		
 		return $collection;
 	}
 	
@@ -472,8 +474,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		foreach ($relations as $relation) {
 			switch ($relation[0]) {
 				case 'one-to-one':
-					$getter1 = 'get'.$relation[2]['method'];
-					$setter1 = 'set'.$relation[2]['method'];
+					$method = $this->_getMapper()->getRelationMethod($relation);
+					$getter1 = 'get'.$method;
+					$setter1 = 'set'.$method;
 					$dependent = $entity->$getter1();
 					if (!is_null($dependent) && !empty($relation[2]['dependentMethod'])) {
 						$setter3 = 'set'.$relation[2]['dependentMethod'];
@@ -484,8 +487,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					}
 					break;
 				case 'many-to-one':
-					$getter = 'get'.$relation[1];
-					$setter = 'set'.$relation[1];
+					$method = $this->_getMapper()->getRelationMethod($relation);
+					$getter = 'get'.$method;
+					$setter = 'set'.$method;
 					$relationEntity = $entity->$getter();
 					if (!is_null($relationEntity) && $this->_isNew($relationEntity)) {
 						$this->insert($relationEntity);
@@ -493,8 +497,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					}
 					break;
 				case 'one-to-many':
-					$getter = 'get'.$relation[1].'s';
-					$setter = 'get'.$relation[1].'s';
+					$method = $this->_getMapper()->getRelationMethod($relation);
+					$getter = 'get'.$method;
+					$setter = 'get'.$method;
 					if (!isset($relation[2]['fk'])) {
 						throw new Exception("Foriegn Key not set for {$relation[0]} relation '{$relation[1]}' in '$class'");
 					}
@@ -517,7 +522,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 									continue;
 								}
 							}
-							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk !== null) {
+							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk != null) {
 								continue;
 							}
 							$relationEntity->$fk = $entity->$key;
@@ -551,7 +556,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	public function returnQueryAsRows($sql, $class) {
-		return $this->_returnResultRows($sql, $class);
+		return $this->_returnResultRowsAsArray($sql);
 	}
 	
 	public function returnQueryAsObjects($sql, $class) {
