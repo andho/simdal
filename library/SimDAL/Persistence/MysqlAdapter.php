@@ -90,7 +90,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	protected function _returnResultRowsAsArray($sql) {
 		$this->_connect();
 		
-		$query = mysql_query($sql, $this->_conn) or die(mysql_error($this->_conn));
+		$query = mysql_query($sql, $this->_conn) or error_log(mysql_error($this->_conn), 0);
 		
 		if ($query === false) {
 			return false;
@@ -109,7 +109,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	protected function _returnResultRows($sql, $class) {
 		$this->_connect();
 		
-		$query = mysql_query($sql, $this->_conn) or die(mysql_error($this->_conn));
+		$query = mysql_query($sql, $this->_conn) or error_log(mysql_error($this->_conn), 0);
 		
 		if ($query === false) {
 			return false;
@@ -129,6 +129,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$this->_connect();
 		
 		if (!($query = mysql_query($sql, $this->_conn))) {
+			error_log(mysql_error($this->_conn), 0);
 			return false;
 		}
 		if (mysql_num_rows($query) <= 0) {
@@ -213,6 +214,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		$result = mysql_query($sql, $this->_conn);
 		
 		if ($result === false) {
+			error_log(mysql_error($this->_conn));
 			return false;
 		}
 		
