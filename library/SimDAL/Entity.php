@@ -56,7 +56,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 					$property = strtolower( substr($relation[1],0,1) ) . substr($relation[1],1);
 					$property = isset($this->$property{s}) ? "{$property}s" : $property;
 					
-					if (!$this->$property->isPopulated()) {
+					if ($this->$property instanceof SimDAL_Collection && !$this->$property->isPopulated()) {
 						$this->$property = $this->getAdapter()->findByColumn($relation[1], $this->$key, $fk, null);
 					}
 				} else if ($relation[0] == 'one-to-one') {
