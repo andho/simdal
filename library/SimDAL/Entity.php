@@ -204,7 +204,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 				if (!$validator->isValid($this->$property)) {
 					$this->_errorMessages[$property] = array_shift($validator->getMessages());
 					$valid = false;
-					return false;
+					break;
 				}
 			}
 		}
