@@ -24,7 +24,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function __destruct() {
-		if (!is_null($this->_conn)) {
+		if (is_resource($this->_conn)) {
 			mysql_close($this->_conn);
 			$this->_conn = null;
 		}

@@ -18,7 +18,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	public function __destruct() {
-		if (!is_null($this->_conn)) {
+		if (is_resource($this->_conn)) {
 			mysqli_rollback($this->_conn);
 			mysqli_close($this->_conn);
 			$this->_conn = null;
