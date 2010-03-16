@@ -151,7 +151,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return mysqli_error($this->_conn);
 	}
 	
-	public function escape($value) {
+	public function escape($value, $type=null) {
 		return mysqli_real_escape_string($this->_conn, $value);
 	}
 	

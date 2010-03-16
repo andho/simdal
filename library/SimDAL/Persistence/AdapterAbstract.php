@@ -417,6 +417,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if (!array_key_exists($column[0], $row)) {
 				continue;
 			}
+			if ($column[1] == 'binary' || $column[1] == 'binary') {
+				$row[$column[0]] = base64_decode($row[$column[0]]);
+			}
 			$entity->$property = $row[$column[0]];
 		}
 		
@@ -581,6 +584,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				} else {
 					return "'".$this->escape($value)."'";
 				}
+				break;
 			case 'float':
 			case 'int':
 				if ($value === '' || ($value != 0 && (empty($value) && $value == ''))) {
@@ -588,6 +592,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				} else {
 					return $this->escape($value);
 				}
+				break;
+			case 'binary':
+			case 'blob':
+				return "'".$this->escape($value)."'";
+				break;
 			default: return $this->escape($value);
 		}
 	}

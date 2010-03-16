@@ -158,7 +158,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return mysql_error($this->_conn);
 	}
 	
-	public function escape($value) {
+	public function escape($value, $type=null) {
 		return mysql_real_escape_string($value);
 	}
 	
