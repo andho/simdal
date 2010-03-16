@@ -76,7 +76,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	protected function _returnResultRowsAsArray($sql) {
 		$this->_connect();
 		
-		$query = mysql_query($sql, $this->_conn) or error_log(mysqli_error($this->_conn), 0);
+		$query = mysql_query($this->_conn, $sql) or error_log(mysqli_error($this->_conn), 0);
 		
 		if ($query === false) {
 			return false;

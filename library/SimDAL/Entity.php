@@ -10,6 +10,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 	
 	protected $_messages = array();
 	protected $_validators = array();
+	protected $_validationGroups = array();
 
 	static public function setDefaultAdapter(SimDAL_Persistence_AdapterAbstract $adapter) {
 		self::$_defaultAdapter = $adapter;
@@ -186,11 +187,21 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 		return $this->_adapter;
 	}
 
-	protected function _validateValidators() {
+	protected function _validateValidators($group=null) {
 		$valid = true;
+		
+		if (!is_null($group) && is_string($group)) {
+			if (!array_key_exists($group, $this->_validationGroups)) {
+				throw new Exception("Validation group '$group' does not exist");
+			}
+			$group = $this->_validationGroups[$group];
+		}
 		
 		foreach ($this->_validators as $property=>$validators) {
 			if (!property_exists($this, $property)) {
+				continue;
+			}
+			if (is_array($group) && !in_array($property, $group)) {
 				continue;
 			}
 			foreach ($validators as $validator) {
@@ -228,6 +239,10 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 				$this->_validators[$property][] = $validator;
 			}
 		}
+	}
+	
+	protected function _setValidationGroups(array $groups) {
+		$this->_validationGroups = $groups;
 	}
 	
 	public function isValid() {
