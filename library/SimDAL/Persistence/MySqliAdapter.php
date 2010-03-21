@@ -30,7 +30,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			return;
 		}
 		
-		$this->_conn = mysqli_connect($this->_host, $this->_username, $this->_password);
+		$this->_conn = mysqli_pconnect($this->_host, $this->_username, $this->_password);
 		mysqli_select_db($this->_conn, $this->_database);
 		mysqli_autocommit($this->_conn, false);
 	}
@@ -76,18 +76,18 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	protected function _returnResultRowsAsArray($sql) {
 		$this->_connect();
 		
-		$query = mysql_query($this->_conn, $sql) or error_log(mysqli_error($this->_conn), 0);
+		$query = mysqli_query($this->_conn, $sql) or error_log(mysqli_error($this->_conn), 0);
 		
 		if ($query === false) {
 			return false;
 		}
 		
 		$rows = array();
-		while ($row = mysql_fetch_assoc($query)) {
+		while ($row = mysqli_fetch_assoc($query)) {
 			$rows[] = $row;
 		}
 		
-		mysql_free_result($query);
+		mysqli_free_result($query);
 		
 		return $rows;
 	}
@@ -152,6 +152,9 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	public function escape($value, $type=null) {
+		if ($type == 'binary') {
+			$vaue = base64_encode($value);
+		}
 		return mysqli_real_escape_string($this->_conn, $value);
 	}
 	

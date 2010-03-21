@@ -35,7 +35,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			return true;
 		}
 		
-		$this->_conn = mysql_connect($this->_host, $this->_username, $this->_password);
+		$this->_conn = mysql_pconnect($this->_host, $this->_username, $this->_password);
 		mysql_select_db($this->_database);
 	}
 	
@@ -159,6 +159,9 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function escape($value, $type=null) {
+		if ($type == 'binary') {
+			$value = base64_encode($value);
+		}
 		return mysql_real_escape_string($value);
 	}
 	

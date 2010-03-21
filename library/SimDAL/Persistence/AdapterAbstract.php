@@ -595,7 +595,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				break;
 			case 'binary':
 			case 'blob':
-				return "'".$this->escape($value)."'";
+				$output = "'".$this->escape($value, 'binary')."'";
+				error_log(base64_decode($output));
+				return $output;
 				break;
 			default: return $this->escape($value);
 		}

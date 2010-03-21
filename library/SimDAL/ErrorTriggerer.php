@@ -38,4 +38,8 @@ class SimDAL_ErrorTriggerer {
 		return count($this->_errorMessages) > 0;
 	}
 	
+	public function clearErrors() {
+		$this->_errorMessages = array();
+	}
+	
 }
