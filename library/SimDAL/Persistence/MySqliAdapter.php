@@ -30,7 +30,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			return;
 		}
 		
-		$this->_conn = mysqli_pconnect($this->_host, $this->_username, $this->_password);
+		$this->_conn = mysqli_connect($this->_host, $this->_username, $this->_password);
 		mysqli_select_db($this->_conn, $this->_database);
 		mysqli_autocommit($this->_conn, false);
 	}
