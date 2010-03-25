@@ -50,7 +50,9 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 							$this->$fk = $this->$property->$key;
 						} else {
 							$this->$property = $this->getAdapter()->findByColumn($relation[1], $this->$fk, $key);
-							$this->$fk = $this->$property->$key;
+							if (!is_null($this->$property)) {
+								$this->$fk = $this->$property->$key;
+							}
 						}
 					}
 				} else if ($relation[0] == 'one-to-many') {
