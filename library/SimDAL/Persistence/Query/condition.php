@@ -20,7 +20,7 @@ class SimDAL_Persistence_Query_Condition {
 			return true;
 		}
 
-		$this->_column = "`".$column."`";
+		$this->_column = $column;
 		$this->_value = $value;
 		
 		if ($value === 'NULL') {

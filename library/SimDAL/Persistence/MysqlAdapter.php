@@ -228,4 +228,20 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $result;
 	}
 	
+	protected function _queryToString(SimDAL_Query $query) {
+		$sql = "SELECT * FROM " . $query->getFrom();
+		
+		foreach ($query->getJoins() as $join) {
+			$sql .= $join->getJoinType() . " " . $join->getTable() . " ON ";
+			foreach ($join->getWheres() as $where) {
+				$sql .= $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn();
+			}
+		}
+		
+		foreach ($query->getWheres() as $where) {
+			$sql .= $
+		}
+		
+	}
+	
 }

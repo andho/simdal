@@ -89,9 +89,19 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$column = $this->_getMapper()->getColumn($class, $property);
 		$column = $column[0];
 		
-		$sql = $this->_processFindByIdQuery($table, $column, $id);
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		
-		return $this->_returnResultRow($sql, $class);
+		$query = new SimDAL_Persistence_Query();
+		$query->from($mapping);
+		$query->whereIdIs($id);
+		
+		foreach ($mapping->getDescendants() as $descendant) {
+			$query->join($descendant->getClass());
+		}
+		
+		$query = $this->queryToString($query);
+		
+		return $this->_returnResultRow($query, $class);
 	}
 
 	public function findByColumn($class, $value, $column, $limit=1) {
@@ -423,6 +433,20 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			$entity->$property = $row[$column[0]];
 		}
 		
+		if ($this->_getMapper()->hasDescendants($class)) {
+			$typeField = $this->_getMapper()->getDescendantTypeField($class);
+			$prefix = $this->_getMapper()->getDescendantClassPrefix($class);
+			foreach ($this->_getMapper()->getDescendantColumnData($class, $prefix.ucfirst($entity->$typeField)) as $property=>$column) {
+				if (!property_exists($entity, $property)) {
+					continue;
+				}
+				if (!array_key_exists($column[0], $row)) {
+					continue;
+				}
+				$entity->$property = $row[$column[0]];
+			}
+		}
+		
 		return $entity;
 	}
 	
@@ -703,5 +727,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	abstract protected function _returnResultRows($sql, $class);
 	
 	abstract protected function _quoteIdentifier($column);
+	
+	abstract protected function _queryToString(SimDAL_Query $query);
 	
 }

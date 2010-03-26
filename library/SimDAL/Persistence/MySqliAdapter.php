@@ -41,7 +41,28 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return "SELECT * FROM `$table`";
 	}
 	
-	protected function _processFindByIdQuery($table, $column, $id) {
+	protected function _processFindByIdQuery($class, $id) {
+		$table = $this->_getMapper()->getTable($class);
+		$property = $this->_getMapper()->getPrimaryKey($class);
+		$column = $this->_getMapper()->getColumn($class, $property);
+		$column = $column[0];
+		
+		$query = new SimDAL_Persistence_Query($this);
+		$query->from($table);
+		$query->where("$table.$column", $id);
+		
+		if ($this->_getMapper()->hasDescendants($class)) {
+			foreach ($this->_getMapper()->getDescendants($class) as $descendantClass=>$descendant) {
+				$fk = $this->_getMapper()->getDescendantColumn($class, $descendantClass, $descendant['foreignKey']);
+				$fk = $fk[0];
+				$pk = $this->_getMapper()->getColumn($class, $descendant['parentKey']);
+				$pk = $pk[0];
+				$query->join($descendant['table'], new SimDAL_Persistence_Query_Condition("$table.{$pk}", "{$descendant['table']}.{$fk}"));
+			}
+		}
+		
+		return $query->__toString();
+		
 		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = '$id'";
 	}
 	
@@ -152,9 +173,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	public function escape($value, $type=null) {
-		if ($type == 'binary') {
-			$vaue = base64_encode($value);
-		}
+		$this->_connect();
+		
 		return mysqli_real_escape_string($this->_conn, $value);
 	}
 	

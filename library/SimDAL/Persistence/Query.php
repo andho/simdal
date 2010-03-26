@@ -28,6 +28,10 @@ class SimDAL_Persistence_Query {
 			throw new Exception("No default persistence adapter was set for Query");
 		}
 	}
+	
+	public function getAdapter() {
+		return $this->_adapter;
+	}
 
 	public function from ($table, $columns = '*') {
 		if (!is_array($table)) {
@@ -71,7 +75,8 @@ class SimDAL_Persistence_Query {
 		foreach ($columns as $key=>$value) {
 			if (is_numeric($key)) {
 				if (is_array($value) && count($value) > 1) {
-					$this->_columns[] = array('column'=>$value[0], 'alias'=>$value[1], 'tablename'=>$this->_table->getTableName());
+					$tablename = isset($value[2]) ? $value[2] : $this->_table->getTableName();
+					$this->_columns[] = array('column'=>$value[0], 'alias'=>$value[1], 'tablename'=>$tablename);
 				}
 				else {
 					$this->_columns[] = array('column'=>$value, 'alias'=>null, 'tablename'=>$this->_table->getTableName());
@@ -85,8 +90,13 @@ class SimDAL_Persistence_Query {
 		return $this;
 	}
 
-	public function join ($table, $column) {
-		$this->_joins[] = new SimDAL_Persistence_Query_Limit($table, $column);
+	public function join ($table, $conditions, $columns='*') {
+		$this->_joins[] = new SimDAL_Persistence_Query_Join($table, $conditions);
+		if (is_array($columns)) {
+			
+		} else {
+			$this->_columns[] = array('column'=>'*', 'alias'=>null, 'tablename'=>$table);
+		}
 
 		return $this;
 	}
@@ -102,7 +112,7 @@ class SimDAL_Persistence_Query {
 			return $this;
 		}
 
-		$adapter = $this->_table->getAdapter();
+		$adapter = $this->getAdapter();
 		$value = $adapter->escape($value);
 		$this->_conditions->addKeyValue($column, $value, $valuealt, $logical);
 

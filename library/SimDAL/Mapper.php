@@ -142,6 +142,70 @@ class SimDAL_Mapper {
 		return $ordered;
 	}
 	
+	public function hasDescendants($class) {
+		if (is_array($this->map[$class]['descendants'])) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public function getDescendants($class) {
+		if (!$this->hasDescendants($class)) {
+			return false;
+		}
+		
+		return $this->map[$class]['descendants'];
+	}
+	
+	public function getDescendantTypeField($class) {
+		if (!$this->hasDescendants($class)) {
+			return false;
+		}
+		
+		return $this->map[$class]['descendantTypeField'];
+	}
+	
+	public function getDescendantClassPrefix($class) {
+		if (!$this->hasDescendants($class)) {
+			return false;
+		}
+		
+		$prefix = $this->map[$class]['descendantClassNamePrefix'];
+		
+		if ($prefix === true) {
+			$prefix = "{$class}_";
+		} else if (!empty($prefix)) {
+			$prefix = $this->map[$class]['descendantClassPrefix'];
+		}
+		
+		return $prefix;
+	}
+	
+	public function getDescendantColumn($class, $descendantClass, $key) {
+		if (!$this->hasDescendants($class)) {
+			return false;
+		}
+		
+		return $this->map[$class]['descendants'][$descendantClass]['columns'][$key];
+	}
+	
+	public function getDescendantColumnData($class, $descendantClass) {
+		if (!$this->hasDescendants($class)) {
+			return false;
+		}
+		
+		return $this->map[$class]['descendants'][$descendantClass]['columns'];
+	}
+	
+	/**
+	 * 
+	 * @return SimDAL_Mapper_Entity
+	 */
+	public function getMappingForEntityClass($class) {
+	  return new SimDAL_Mapper_Entity($this->map[$class]);
+	}
+	
 	public function compare($class1, $class2) {
 		if ($this->_priority2[$class1] > $this->_priority2[$class2]) {
 			return SimDAL_Mapper::COMPARE_GREATER;
