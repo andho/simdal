@@ -229,19 +229,31 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	protected function _queryToString(SimDAL_Query $query) {
-		$sql = "SELECT * FROM " . $query->getFrom();
+		$sql = 'SELECT * FROM ' . $query->getFrom();
 		
 		foreach ($query->getJoins() as $join) {
-			$sql .= $join->getJoinType() . " " . $join->getTable() . " ON ";
+			$sql .= $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
 			foreach ($join->getWheres() as $where) {
-				$sql .= $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn();
+				$method = '_process' . $where->getProcessMethod();
+				$sql = $this->$method($where);
 			}
 		}
 		
+		$wheres = array();
 		foreach ($query->getWheres() as $where) {
-			$sql .= $
+			$method = '_process' . $where->getProcessMethod();
+			$wheres[] = $this->$method($where);
+		}
+		if (count($wheres) > 0) {
+			$sql .= ' WHERE ' . implode(' AND ', $wheres);
 		}
 		
+		return $sql;
+		
+	}
+	
+	protected function _processWhereJoinDescendant($where) {
+		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
 	}
 	
 }
