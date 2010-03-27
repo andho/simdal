@@ -15,6 +15,7 @@ class SimDAL_UnitOfWork {
 	private $_modified = array();
 	private $_actual = array();
 	private $_delete = array();
+	private $_newkey = 1;
 	
 	public function __construct($mapper=null) {		
 		if ($mapper instanceof SimDAL_Mapper) {
@@ -42,7 +43,13 @@ class SimDAL_UnitOfWork {
 			return false;
 		}
 		
-		$this->_new[$class][] = $entity;
+		$pk = $this->_mapper->getPrimaryKey($class);
+		$column = $this->_mapper->getColumn($class, $pk);
+		if ($column[2]['autoIncrement'] === true) {
+			$entity->$pk = 'autoincrement'.$this->_newkey++;
+		}
+		
+		$this->_new[$class][$entity->$pk] = $entity;
 	}
 	
 	public function getNew() {
@@ -129,14 +136,16 @@ class SimDAL_UnitOfWork {
 	}
 	
 	public function getLoaded($class=null, $id=null) {
-		if (!is_null($class) && !array_key_exists($class, $this->_modified)) {
+		if (!is_null($class) && !array_key_exists($class, $this->_modified) && !array_key_exists($class, $this->_new)) {
 			return null;
 		}
 		if (!is_null($id)) {
-			if (!array_key_exists($id, $this->_modified[$class])) {
-				return null;
+			if (array_key_exists($id, $this->_modified[$class])) {
+				return $this->_modified[$class][$id];
+			} else if (array_key_exists($id, $this->_new[$class])) {
+				return $this->_new[$class][$id];
 			}
-			return $this->_modified[$class][$id];
+			return null;
 		}
 		if (is_null($id)) {
 			return $this->_modified[$class];

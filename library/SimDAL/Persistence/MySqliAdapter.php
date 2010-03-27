@@ -227,6 +227,28 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $result;
 	}
 	
-	
+	protected function _queryToString(SimDAL_Query $query) {
+		$sql = 'SELECT * FROM ' . $query->getFrom();
+		
+		foreach ($query->getJoins() as $join) {
+			$sql .= $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
+			foreach ($join->getWheres() as $where) {
+				$method = '_process' . $where->getProcessMethod();
+				$sql = $this->$method($where);
+			}
+		}
+		
+		$wheres = array();
+		foreach ($query->getWheres() as $where) {
+			$method = '_process' . $where->getProcessMethod();
+			$wheres[] = $this->$method($where);
+		}
+		if (count($wheres) > 0) {
+			$sql .= ' WHERE ' . implode(' AND ', $wheres);
+		}
+		
+		return $sql;
+		
+	}
 	
 }

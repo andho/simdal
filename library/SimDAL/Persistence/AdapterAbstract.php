@@ -91,7 +91,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		
-		$query = new SimDAL_Persistence_Query();
+		$query = new SimDAL_Query();
 		$query->from($mapping);
 		$query->whereIdIs($id);
 		
@@ -99,7 +99,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			$query->join($descendant->getClass());
 		}
 		
-		$query = $this->queryToString($query);
+		$query = $this->_queryToString($query);
 		
 		return $this->_returnResultRow($query, $class);
 	}

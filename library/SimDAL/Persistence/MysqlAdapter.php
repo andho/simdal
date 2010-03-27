@@ -256,4 +256,11 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
 	}
 	
+	protected function _processWhereId(SimDAL_Query_Where_Id $where) {
+		$primary_key_column = $where->getLeftValue();
+		$output = $primary_key_column->getTable() . '.' . $primary_key_column->getColumn();
+		$output .= ' = ' . $where->getRightValue();
+		return $output;
+	}
+	
 }

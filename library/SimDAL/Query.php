@@ -10,11 +10,11 @@ class SimDAL_Query {
 	protected $_join = array();
 	
 	public function from($entity) {
-		$this->_from;
+		$this->_from = $entity;
 	}
 	
 	public function whereIdIs($id) {
-		$this->_where[] = new SimDAL_Query_Where_Id($id);
+		$this->_where[] = new SimDAL_Query_Where_Id($this->_from, $id);
 	}
 	
 	public function join($join) {
@@ -29,6 +29,10 @@ class SimDAL_Query {
 	
 	public function getJoins() {
 		return $this->_join;
+	}
+	
+	public function getWheres() {
+		return $this->_where;
 	}
 	
 }
