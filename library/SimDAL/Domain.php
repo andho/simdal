@@ -8,8 +8,10 @@ class SimDAL_Domain extends SimDAL_ErrorTriggerer {
 	
 	protected $_commits = array();
 	
-	public function __construct($user) {
-		$this->_user = $user;
+	public function __construct($user=null) {
+		if (!is_null($user)) {
+			$this->_user = $user;
+		}
 	}
 	
 	static public function getInstance($user=null, $class='Domain') {
