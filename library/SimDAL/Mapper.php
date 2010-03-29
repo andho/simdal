@@ -109,10 +109,14 @@ class SimDAL_Mapper {
 		return $this->map;
 	}
 	
-	public function getClassPriority() {
+	public function getClassPriority($classes=null) {
 		$priority = array();
 		
-		foreach (array_keys($this->map) as $class) {
+		if (is_null($classes)) {
+			$classes = array_keys($this->map);
+		}
+		
+		foreach ($classes as $class) {
 			$priority[0][$class] = $class;
 			$priority2[$class] = 0;
 		}
@@ -120,6 +124,9 @@ class SimDAL_Mapper {
 		$highest = 0;
 		
 		foreach ($this->map as $class=>$metadata) {
+			if (!in_array($class, $classes)) {
+				continue;
+			}
 			if (isset($metadata['associations'])) {
 				foreach ($metadata['associations'] as $relations) { 
 					switch ($relations[0]) {
