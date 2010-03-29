@@ -251,4 +251,15 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		
 	}
 	
+	protected function _processWhereJoinDescendant($where) {
+		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
+	}
+	
+	protected function _processWhereId(SimDAL_Query_Where_Id $where) {
+		$primary_key_column = $where->getLeftValue();
+		$output = $primary_key_column->getTable() . '.' . $primary_key_column->getColumn();
+		$output .= ' = ' . $where->getRightValue();
+		return $output;
+	}
+	
 }

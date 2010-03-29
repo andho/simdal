@@ -549,7 +549,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 									continue;
 								}
 							}
-							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk != null) {
+							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk != null && strpos($relationEntity->$fk, 'autoincrement') === false) {
 								continue;
 							}
 							$relationEntity->$fk = $entity->$key;

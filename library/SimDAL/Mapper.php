@@ -32,6 +32,12 @@ class SimDAL_Mapper {
 	}
 	
 	public function getPrimaryKey($class) {
+		if (!array_key_exists($class, $this->map)) {
+			return false;
+		}
+		if (!array_key_exists('columns', $this->map[$class])) {
+			return false;
+		}
 		foreach ($this->map[$class]['columns'] as $property=>$column) {
 			if ($column[2]['pk'] === true) {
 				return $property;

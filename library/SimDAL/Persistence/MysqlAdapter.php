@@ -159,6 +159,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	}
 	
 	public function escape($value, $type=null) {
+		$this->_connect();
 		if ($type == 'binary') {
 			$value = base64_encode($value);
 		}

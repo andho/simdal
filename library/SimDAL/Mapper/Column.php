@@ -24,6 +24,14 @@ class SimDAL_Mapper_Column {
 		return $this->_table;
 	}
 	
+	public function getClass() {
+		return $this->_class;
+	}
+	
+	public function getProperty() {
+		return $this->_property;
+	}
+	
 	public function getColumn() {
 		return $this->_fieldName;
 	}
