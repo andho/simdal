@@ -107,6 +107,9 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return isset($this[$column]);
 	}
 	
+	/**
+	 * @return SimDAL_Mapper_Column
+	 */
 	public function getPrimaryKeyColumn() {
 		return $this->_columns[$this->getPrimaryKey()];
 	}

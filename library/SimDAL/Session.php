@@ -103,9 +103,52 @@ class SimDAL_Session {
 		
 		$this->getAdapter()->startTransaction();
 		
+		$error = false;
+		
 		foreach ($priority as $class) {
-			if ($this->_hasDeletesForClass($class) && )
+			if ($this->_hasDeletesForClass($class)) {
+				$error = true;
+			}
+			
+			if ($this->_hasInsertsFor($class) && !$this->_commitInsertsFor($class)) {
+				$error = true;
+				break;
+			}
+			
+			if ($this->_hasUpdatesFor($class) && !$this->_commitUpdatesFor($class)) {
+				$error = true;
+				break;
+			}
 		}
+		
+		if (!$error) {
+			$this->getAdapter()->commit();
+		} else {
+			$this->getAdapter()->rollbackTransaction();
+		}
+	}
+	
+	protected function _commitInsertsFor($class) {
+		foreach ($this->_new[$class] as $key=>$entity) {
+			$id = $this->getAdapter()->insertEntity($entity);
+			$class = $this->getMapper()->getClassFromEntity($entity);
+			$mapping = $this->getMapper()->getMappingForEntityClass($class);
+			$pk = $mapping->getPrimaryKey();
+			
+			$entity->$pk = $id;
+		}
+	}
+	
+	protected function _commitUpdatesFor($class) {
+		
+	}
+	
+	protected function _hasDeletesForClass($class) {
+		if (!array_key_exists($class, $this->_deleted) || !is_array($this->_deleted[$class]) || count($this->_deleted[$class]) <= 0) {
+			return false;
+		}
+		
+		return true;
 	}
 	
 	protected function getUsedClasses() {
