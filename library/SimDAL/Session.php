@@ -136,6 +136,8 @@ class SimDAL_Session {
 			$pk = $mapping->getPrimaryKey();
 			
 			$entity->$pk = $id;
+			$this->_resolveEntityDependencies($entity);
+			$this->getUnitOfWork()->updateCleanEntity($entity);
 		}
 	}
 	
