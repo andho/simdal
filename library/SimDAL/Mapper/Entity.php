@@ -79,6 +79,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		$this->_descendantClassNamePrefix = $map['descendantClassNamePrefix'];
 		
 		$this->_setupColumns();
+		$this->_setupAssociations();
 	}
 	
 	public function getTable() {
@@ -132,6 +133,14 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 			if ($column_data[2]['pk'] === true) {
 				$this->_primaryKey = $property;
 			}
+		}
+	}
+	
+	protected function _setupAssociations() {
+		$associations = $this->_associations;
+		foreach ($associations as $association_data) {
+			$association = new SimDAL_Mapper_Association($this, $association_data);
+			$this->_associations[$association->getIdentifier()] = $association;
 		}
 	}
 	

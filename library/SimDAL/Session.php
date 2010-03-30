@@ -137,12 +137,39 @@ class SimDAL_Session {
 			
 			$entity->$pk = $id;
 			$this->_resolveEntityDependencies($entity);
-			$this->getUnitOfWork()->updateCleanEntity($entity);
+			$this->getUnitOfWork()->updateCleanEntity($entity); 
 		}
 	}
 	
 	protected function _commitUpdatesFor($class) {
 		
+	}
+	
+	protected function _resolveEntityDependencies($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$associations = $mapping->getAssociations();
+		
+		if (!is_array($associations) || count($associations) <= 0) {
+			return;
+		}
+		
+		/* @var $association SimDAL_Mapper_Association */
+		foreach ($associations as $association) {
+			switch ($association->getType()) {
+				case 'one-to-one':
+					break;
+				case 'many-to-one':
+					$method = $association->getMethod();
+					$setter = 'set' . $method;
+					$getter = 'get' . $method;
+					$relatedEntity = $entity->$getter();
+					if (!is_null($relatedEntity) && )
+					break;
+				case 'one-to-many':
+					break;
+			}
+		}
 	}
 	
 	protected function _hasDeletesForClass($class) {
