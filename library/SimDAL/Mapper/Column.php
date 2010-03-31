@@ -17,7 +17,7 @@ class SimDAL_Mapper_Column {
 		$this->_fieldName = $fieldname;
 		$this->_dataType = $datatype;
 		$this->_primaryKey = $primarykey;
-		$this->_autoIncrement = $autoincrement;
+		$this->_autoIncrement = $this->_primaryKey === true ? $autoincrement : false;
 	}
 	
 	public function getTable() {
@@ -34,6 +34,10 @@ class SimDAL_Mapper_Column {
 	
 	public function getColumn() {
 		return $this->_fieldName;
+	}
+	
+	public function isAutoIncrement() {
+		return $this->_autoIncrement;
 	}
 	
 }

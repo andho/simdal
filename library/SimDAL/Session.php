@@ -136,8 +136,8 @@ class SimDAL_Session {
 			$pk = $mapping->getPrimaryKey();
 			
 			$entity->$pk = $id;
-			$this->_resolveEntityDependencies($entity);
-			$this->getUnitOfWork()->updateCleanEntity($entity); 
+			$this->_distributeParentKeysToForeignKeys($entity);
+			$this->getUnitOfWork()->update($entity);
 		}
 	}
 	
@@ -145,7 +145,7 @@ class SimDAL_Session {
 		
 	}
 	
-	protected function _resolveEntityDependencies($entity) {
+	protected function _distributeParentKeysToForeignKeysOfNewEntity($entity) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$associations = $mapping->getAssociations();
@@ -156,17 +156,32 @@ class SimDAL_Session {
 		
 		/* @var $association SimDAL_Mapper_Association */
 		foreach ($associations as $association) {
+			$parentKey = $association->getParentKey();
+			$primaryKey = $mapping->getPrimaryKey();
+			if ($primaryKey != $parentKey) {
+				continue;
+			}
+			if (!$mapping->getPrimaryKeyColumn()->isAutoIncrement()) {
+				continue;
+			}
+			$foreignKey = $association->getForeignKey();
 			switch ($association->getType()) {
 				case 'one-to-one':
-					break;
-				case 'many-to-one':
-					$method = $association->getMethod();
-					$setter = 'set' . $method;
-					$getter = 'get' . $method;
-					$relatedEntity = $entity->$getter();
-					if (!is_null($relatedEntity) && )
+					$method = $association->getParentM();
+					$getter = 'set' . $method;
+					$setter = 'get' . $method;
+					$dependent = $entity->$getter();
+					if (!is_null($dependent)) {
+						$dependent->$foreignKey = $entity->$parentKey;
+					}
 					break;
 				case 'one-to-many':
+					$method = $association->getMethod();
+					$getter = 'get' . $method;
+					$dependents = $entity->$getter();
+					foreach ($dependents as $dependent) {
+						$dependent->$foreignKey = $entity->$parentKey;
+					}
 					break;
 			}
 		}

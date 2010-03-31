@@ -6,7 +6,7 @@ class SimDAL_Mapper_Association {
 	protected $_type;
 	protected $_class;
 	protected $_foreignKey;
-	protected $_primaryKey;
+	protected $_parentKey;
 	protected $_method;
 	protected $_parentMethod;
 	
@@ -15,8 +15,8 @@ class SimDAL_Mapper_Association {
 		$this->_type = $data[0];
 		$this->_class = $data[1];
 		$this->_foreignKey = $data[2]['fk'];
-		$this->_primaryKey = isset($data[2]['key']) ? $data[2]['key'] : $this->_entity->getPrimaryKey();
-		$this->_method = isset($data[2]['method']) ? $data[2]['method'] : $this->_class;
+		$this->_parentKey = isset($data[2]['key']) ? $data[2]['key'] : $this->_entity->getPrimaryKey();
+		$this->_method = isset($data[2]['method']) ? $data[2]['method'] : $this->_setMethod();
 		$this->_parentMethod = isset($data[2]['parentMethod']) ? $data[2]['parentMethod'] : null;
 	}
 	
@@ -28,8 +28,30 @@ class SimDAL_Mapper_Association {
 		return $this->_method;
 	}
 	
+	public function getParentMethod() {
+		return $this->_parentMethod;
+	}
+	
 	public function getType() {
 		return $this->_type;
+	}
+	
+	public function getForeignKey() {
+		return $this->_foreignKey;
+	}
+	
+	public function getParentKey() {
+		return $this->_parentKey;
+	}
+	
+	protected function _setMethod() {
+		$method = $this->_class;
+		
+		if ($this->getType() == 'one-to-many') {
+			$method = $method . 's';
+		}
+		
+		$this->_method = $method;
 	}
 	
 }
