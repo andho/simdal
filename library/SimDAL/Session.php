@@ -142,7 +142,9 @@ class SimDAL_Session {
 	}
 	
 	protected function _commitUpdatesFor($class) {
-		
+		foreach ($this->_modified[$class] as $key=>$entity) {
+			
+		}
 	}
 	
 	protected function _distributeParentKeysToForeignKeysOfNewEntity($entity) {
