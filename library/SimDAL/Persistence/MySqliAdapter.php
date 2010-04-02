@@ -228,13 +228,47 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	protected function _queryToString(SimDAL_Query $query) {
-		$sql = 'SELECT * FROM ' . $query->getFrom();
+	    $columns = array();
+	    $columns_array = $query->getColumns();
+	    if ($query->hasAliases() || count($columns_array) > 0) {
+	        $columns_array = $query->getTableColumns();
+	    }
+	    if (count($columns_array) > 0) {
+	        /* @var $column SimDAL_Mapper_Column */
+	        foreach ($columns_array as $column) {
+		        $column_string = $column->getTable() . '.' . $column->getColumn();
+		        if ($column->hasAlias()) {
+		            $column_string .= ' AS ' . $column->getAlias();
+		        }
+		        $columns[] = $column_string;
+	        }
+	    } else {
+	        $columns[] = $query->getFrom() . '.*';
+	    }
 		
+		/* @var $join SimDAL_Query_Join_Descendent */
+	    $joins = '';
 		foreach ($query->getJoins() as $join) {
-			$sql .= $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
+			$joins .= ' ' . $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
 			foreach ($join->getWheres() as $where) {
 				$method = '_process' . $where->getProcessMethod();
-				$sql = $this->$method($where);
+				$joins .= $this->$method($where);
+			}
+			$columns_array = $join->getColumns();
+			if ($join->hasAliases() || count($columns_array) > 0) {
+			    $columns_array = $join->getTableColumns();
+			}
+			if (count($columns_array) > 0) {
+			    /* @var $column SimDAL_Mapper_Column */
+			    foreach ($columns_array as $column) {
+			        $column_string = $column->getTable() . '.' . $column->getColumn();
+			        if ($column->hasAlias()) {
+			            $column_string .= ' AS ' . $this->_quoteIdentifier($column->getAlias());
+			        }
+			        $columns[] = $column_string;
+			    }
+			} else {
+			    $columns[] = $join->getTable() . '.*';
 			}
 		}
 		
@@ -243,6 +277,11 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			$method = '_process' . $where->getProcessMethod();
 			$wheres[] = $this->$method($where);
 		}
+		
+		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
+		$sql .= 'FROM ' . $query->getFrom();
+		$sql .= $joins;
+		
 		if (count($wheres) > 0) {
 			$sql .= ' WHERE ' . implode(' AND ', $wheres);
 		}
@@ -251,7 +290,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		
 	}
 	
-	protected function _processWhereJoinDescendant($where) {
+	protected function _processWhereJoinDescendent($where) {
 		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
 	}
 	

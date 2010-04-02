@@ -8,26 +8,27 @@ class SimDAL_Query_Where_JoinDescendant {
 	 */
 	protected $_entity;
 	/**
-	 * 
-	 * @var SimDAL_Mapper_Descendant
+	 * @var SimDAL_Mapper_Descendent
 	 */
-	protected $_descendant;
+	protected $_descendent;
 	
-	public function __construct($entity, $descendant) {
+	public function __construct(SimDAL_Mapper_Entity $entity, SimDAL_Mapper_Descendent $descendant) {
 		$this->_entity = $entity;
-		$this->_descendant = $descendant;
+		$this->_descendent = $descendant;
 	}
 	
 	public function getLeftValue() {
-		return new SimDAL_Query_Where_Column($this->_descendant->getTable(), $this->_descendant->getColumn($this->_descendant->getForeignKey()));
+	    return $this->_descendent->getColumn($this->_descendent->getForeignKey());
+		//return new SimDAL_Query_Where_Column($this->_descendant->getTable(), $this->_descendant->getColumn($this->_descendant->getForeignKey()));
 	}
 	
 	public function getRightValue() {
-		return new SimDAL_Query_Where_Column($this->_entity->getTable(), $this->_entity->getColumn($this->_descendant->getParentKey()));
+	    return $this->_entity->getColumn($this->_descendent->getParentKey());
+		//return new SimDAL_Query_Where_Column($this->_entity->getTable(), $this->_entity->getColumn($this->_descendant->getParentKey()));
 	}
 	
 	public function getProcessMethod() {
-		return 'WhereJoinDescendant';
+		return 'WhereJoinDescendent';
 	}
 	
 }

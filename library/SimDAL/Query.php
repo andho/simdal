@@ -8,9 +8,23 @@ class SimDAL_Query {
 	protected $_from;
 	protected $_where = array();
 	protected $_join = array();
+	protected $_columns = array();
 	
-	public function from($entity) {
+	public function from($entity, array $columns = array()) {
+	    $this->_columns = $columns;
 		$this->_from = $entity;
+	}
+	
+	public function hasAliases() {
+	    return $this->_from->hasAliases();
+	}
+	
+	public function getColumns() {
+	  return $this->_columns;
+	}
+	
+	public function getTableColumns() {
+	    $this->_from->getColumns();
 	}
 	
 	public function whereIdIs($id) {
@@ -18,8 +32,8 @@ class SimDAL_Query {
 	}
 	
 	public function join($join) {
-		if ($join instanceof SimDAL_Mapper_Descendant) {
-			$this->_join[] = new SimDAL_Query_Join_Descendant($descendant);
+		if ($join instanceof SimDAL_Mapper_Descendent) {
+			$this->_join[] = new SimDAL_Query_Join_Descendent($join);
 		}
 	}
 	

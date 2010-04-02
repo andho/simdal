@@ -96,10 +96,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		if (!is_null($entity)) {
 			return $entity;
 		}
-		$table = $this->_getMapper()->getTable($class);
-		$property = $this->_getMapper()->getPrimaryKey($class);
-		$column = $this->_getMapper()->getColumn($class, $property);
-		$column = $column[0];
 		
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		
@@ -107,8 +103,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$query->from($mapping);
 		$query->whereIdIs($id);
 		
-		foreach ($mapping->getDescendants() as $descendant) {
-			$query->join($descendant->getClass());
+		foreach ($mapping->getDescendents() as $descendent) {
+			$query->join($descendent);
 		}
 		
 		$query = $this->_queryToString($query);
@@ -427,7 +423,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _entityFromArray($row, &$class) {
 		$entityClass = $this->_getMapper()->getTypeMorphClass($class, $row);
 		if ($entityClass == $class) {
-			$entityClass = $this->_getMapper()->getDescendantClass($class, $row);
+		    $mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		    $entityClass = $mapping->getDescendentClass($row);
 		}
 		
 		$entity = new $entityClass();
