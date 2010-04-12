@@ -185,6 +185,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	public function startTransaction() {
+		$this->_connect();
 		return mysqli_autocommit($this->_conn, false);
 	}
 	

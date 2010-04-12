@@ -283,7 +283,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$this->getUnitOfWork()->delete($entity);
 	}
 	
-	public function deleteById($id) {
+	public function deleteById($id, $entity) {
 		$this->getUnitOfWork()->delete(
 			$id,
 			$this->_getMapper()->getTable(
@@ -293,7 +293,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	public function deleteByColumn($class, $value, $column) {
-		$this->getUnitOfWork()->delete($value, $class, $column);
+		return $this->getUnitOfWork()->delete($value, $class, $column);
 	}
 
 	public function insertMultiple($class, $data) {
