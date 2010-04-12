@@ -2,7 +2,7 @@
 
 class SimDAL_Session {
 	
-	static protected $_defaultAdapter;
+	static protected $_defaultAdapterClass;
 	static protected $_defaultMapper;
 	
 	protected $_adapter;
@@ -22,14 +22,23 @@ class SimDAL_Session {
 		self::$_defaultMapper = $mapper;
 	}
 	
-	public function __construct($adapter=null, $mapper=null) {
-		if ($adapter instanceof SimDAL_Mapper) {
-			$this->_mapper = $adapter;
-		} else if (self::$_defaultAdapter instanceof SimDAL_Mapper) {
-			$this->_mapper = self::$_defaultAdapter;
+	public function __construct($mapper=null, $adapter_class=null) {
+		if (!is_null($adapter_class)) {
+			$this->_adapter = $adapter_class;
 		} else {
-			throw new SimDAL_MapperIsNotSetException();
+			$this->_adapter = self::$_defaultAdapterClass;
 		}
+		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
+			throw new Exception("Supplied Adapter Class is not a valid class name");
+		}
+		
+		$class_parents = class_parents($this->_adapter);
+		if (!in_array('SimDAL_Persistence_AdapterAbstract')) {
+			throw new Exception("Supplied Adapter  is not a valid Adapter Class");
+		}
+		
+		$adapter_class = $this->_adapter;
+		$this->_adapter = new $adapter_class(null, $this);
 		
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
@@ -98,6 +107,8 @@ class SimDAL_Session {
 	}
 	
 	public function commit() {
+		$this->_resolveDependencies();
+		
 		$classes = $this->_getUsedClasses();
 		$priority = $this->_getCommitPriority($classes);
 		
@@ -127,6 +138,55 @@ class SimDAL_Session {
 			$this->getAdapter()->rollbackTransaction();
 		}
 	}
+
+	protected function _resolveDependencies() {
+		foreach ($this->_new as $class=>$entities) {
+			foreach ($entities as $entity) {
+				$this->_resolveEntityDependencies($entity);
+			}
+		}
+	}
+	
+	protected function _resolveEntityDependencies($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$associations = $mapping->getAssociations();
+		$primaryKey = $mapping->getPrimaryKeyColumn();
+		
+		if (!is_array($associations) || count($associations) <= 0) {
+			return;
+		}
+		
+		$processed = array();
+		
+		/* @var $association SimDAL_Mapper_Association */
+		foreach ($associations as $association) {
+			$parentKey = $association->getParentKey();
+			$foreignKey = $association->getForeignKey();
+			switch ($association->getType()) {
+				case 'one-to-one':
+					$method = $assocation->getMethod();
+					$getter = 'get ' . $method;
+					$dependent = $this->$getter();
+				case 'one-to-many':
+					$method = $association->getMethod();
+					$getter = 'get' . $method;
+					$dependents = $entity->$getter();
+					$dependent_mapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
+					$dependent_associations_all = $dependent_mapping->getAssociations();
+					foreach ($dependent_associations_all as $dependent_association) {
+						if ($class == $dependent_association->getClass() && $foreignKey == $dependent_association->getForeignKey()) {
+							break;
+						}
+					}
+					foreach ($dependents as $dependent) {
+						$method = $dependent_association->getMethod();
+						$dependent->$method($entity);
+					}
+					break;
+			}
+		}
+	}
 	
 	protected function _commitInsertsFor($class) {
 		foreach ($this->_new[$class] as $key=>$entity) {
@@ -136,18 +196,22 @@ class SimDAL_Session {
 			$pk = $mapping->getPrimaryKey();
 			
 			$entity->$pk = $id;
-			$this->_distributeParentKeysToForeignKeys($entity);
+			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
 			$this->getUnitOfWork()->update($entity);
 		}
 	}
 	
 	protected function _commitUpdatesFor($class) {
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $mapping->getPrimaryKey();
 		foreach ($this->_modified[$class] as $key=>$entity) {
-			
+			$this->getAdapter()->updateEntity($entity);
+			$actual = clone($entity);
+			$this->_actual[$class][$entity->$primaryKey] = $entity;
 		}
 	}
 	
-	protected function _distributeParentKeysToForeignKeysOfNewEntity($entity) {
+	protected function _distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$associations = $mapping->getAssociations();
@@ -206,6 +270,27 @@ class SimDAL_Session {
 	
 	protected function getCommitPriority($classes) {
 		return $this->getMapper()->getClassPriority($classes);
+	}
+	
+	public function getChanges($entity) {
+		$data = array();
+		
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$pk = $this->getMapper()->getPrimaryKey($class);
+		
+		if (!is_object($this->_actual[$class][$entity->$pk])) {
+			return $data;
+		}
+		
+		foreach ($this->_actual[$class][$entity->$pk] as $key=>$value) {
+			if ($entity->$key == $value) {
+				continue;
+			}
+			
+			$data[$key] = $entity->$key;
+		}
+		
+		return $data;
 	}
 	
 	/**

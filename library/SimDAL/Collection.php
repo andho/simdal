@@ -6,6 +6,8 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	private $_position = 0;
 	private $_data = array();
 	private $_keymap = array();
+	private $_searchHash = array();
+	private $_searchHashed = array();
 	public function rewind() {
 		$this->_position = 0;
 	}
@@ -129,6 +131,28 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		}
 		
 		return $this->_data[$this->_keymap[$position]];
+	}
+	
+	public function search($property, $value) {
+		if (!array_key_exists($property, $this->_searchHash)) {
+			$this->_searchHash[$property] = array();
+		}
+		
+		if ($this->_searchHashed[$property] !== true) {
+			foreach ($this as $item) {
+				if (!property_exists($item, $property)) {
+					throw new Exception("Invalid property searched for in collection of type '".get_class($item)."'");
+				}
+				$this->_searchHash[$property][$item->$property] = $item;
+			}
+			$this->_searchHashed[$property] = true;
+		}
+		
+		if (array_key_exists($value, $this->_searchHash[$property])) {
+			return $this->_searchHash[$property][$value];
+		}
+		
+		return null;
 	}
 	
 }

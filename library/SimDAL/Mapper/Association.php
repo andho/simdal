@@ -44,6 +44,10 @@ class SimDAL_Mapper_Association {
 		return $this->_parentKey;
 	}
 	
+	public function getClass() {
+		return $this->_class;
+	}
+	
 	protected function _setMethod() {
 		$method = $this->_class;
 		

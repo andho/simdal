@@ -298,7 +298,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	protected function _processWhereId(SimDAL_Query_Where_Id $where) {
 		$primary_key_column = $where->getLeftValue();
 		$output = $primary_key_column->getTable() . '.' . $primary_key_column->getColumn();
-		$output .= ' = ' . $where->getRightValue();
+		$output .= ' = ' . $this->_transformData($primary_key_column->getProperty(), $where->getRightValue(), $primary_key_column->getClass());
 		return $output;
 	}
 	

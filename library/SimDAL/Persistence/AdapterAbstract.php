@@ -17,6 +17,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	 * @var SimDAL_Mapper
 	 */
 	protected $_mapper = null;
+	protected $_session = null;
 	
 	protected $_inserts = array();
 	protected $_updates = array();
@@ -32,13 +33,17 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		self::$_defaultMapper = $mapper;
 	}
 	
-	public function __construct($mapper=null) {
+	public function __construct($mapper=null, SimDAL_Session $session=null) {
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
 		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
 			$this->_mapper = self::$_defaultMapper;
 		} else {
 			throw new SimDAL_MapperIsNotSetException();
+		}
+		
+		if ($session instanceof SimDAL_Session) {
+			$this->_session = $session;
 		}
 	}
 	
@@ -53,6 +58,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		return $this->_unitOfWork;
+	}
+	
+	/**
+	 * @return SimDAL_Session
+	 */
+	protected function _getSession() {
+		return $this->_session;
 	}
 	
 	public function _insert($entity) {
@@ -81,6 +93,26 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$id = $this->lastInsertId();
 		
 		return $id;
+	}
+	
+	public function updateEntity($entity) {
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		$pk = $mapping->getPrimaryKey();
+		
+		$row = $this->_getSession()->getChanges($entity);
+		if (count($row) <= 0) {
+			return true;
+		}
+		
+		$sql = $this->_processUpdateQuery($class, $data, $entity->$pk);
+		$result = $this->execute($sql);
+		if ($result === false) {
+			$this->_errorMessages['dberror'] = $this->getAdapterError();
+			return false;
+		}
+		
+		return true;
 	}
 	
 	public function getAll($class) {
@@ -367,6 +399,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				$commit = false;
 				break;
 			}
+			// @todo release/reinitialize arrays as they are not needed anymore
 			
 			if (array_key_exists($class, $this->_inserts) && !$this->insertMultiple($class, $this->_inserts[$class])) {
 				$commit = false;
