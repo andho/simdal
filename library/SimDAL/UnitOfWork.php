@@ -140,9 +140,9 @@ class SimDAL_UnitOfWork {
 			return null;
 		}
 		if (!is_null($id)) {
-			if (array_key_exists($id, $this->_modified[$class])) {
+			if (is_array($this->_modified[$class]) && array_key_exists($id, $this->_modified[$class])) {
 				return $this->_modified[$class][$id];
-			} else if (array_key_exists($id, $this->_new[$class])) {
+			} else if (is_array($this->_new[$class]) && array_key_exists($id, $this->_new[$class])) {
 				return $this->_new[$class][$id];
 			}
 			return null;
