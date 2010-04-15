@@ -73,13 +73,15 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		$this->_class = $class;
 		$this->_table = $map['table'];
 		$this->_columnsRawData = $map['columns'];
-		$this->_associations = $map['associations'];
-		$this->_typeBinding = $map['type_binding'];
+		if (isset($map['associations']) && is_array($map['associations'])) {
+			$this->_associations = $map['associations'];
+		}
+		$this->_typeBinding = isset($map['type_binding']) ? $map['type_binding'] : '';
 		if (isset($map['descendents']) && is_array($map['descendents'])) {
 			$this->_descendents = $map['descendents'];
 		}
-		$this->_descendentTypeField = $map['descendentTypeField'];
-		$this->_descendentClassNamePrefix = $map['descendentClassNamePrefix'];
+		$this->_descendentTypeField = isset($map['descendentTypeField']) ? $map['descendentTypeField'] : '';
+		$this->_descendentClassNamePrefix = isset($map['descendentClassNamePrefix']) ? $map['descendentClassNamePrefix'] : '';
 		
 		$this->_setupColumns();
 		$this->_setupAssociations();
