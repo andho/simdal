@@ -275,8 +275,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		
 		$wheres = array();
 		foreach ($query->getWheres() as $where) {
-			$method = '_process' . $where->getProcessMethod();
-			$wheres[] = $this->$method($where);
+			$wheres[] = $this->_processWhere($where);
 		}
 		
 		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
@@ -300,6 +299,40 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$output = $primary_key_column->getTable() . '.' . $primary_key_column->getColumn();
 		$output .= ' = ' . $this->_transformData($primary_key_column->getProperty(), $where->getRightValue(), $primary_key_column->getClass());
 		return $output;
+	}
+	
+	protected function _processWhere(SimDAL_Query_Where_Interface $where) {
+		if ($where instanceof SimDAL_Query_Where_Collection) {
+			//@todo do whatever is needed
+		}
+		$left = $this->_processWhereValue($where->getLeftValue(), $where);
+		$right = $this->_processWhereValue($where->getRightValue(), $where);
+		
+		$operator = $this->_processWhereOperator($where->getOperator());
+		
+		return $left . $operator . $right;
+	}
+	
+	protected function _processWhereValue($value, $where) {
+		if (is_object($value)) {
+			$class = get_class($value);
+			switch ($class) {
+				case 'SimDAL_Mapper_Column': return $this->_processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
+			}
+		} else {
+			return "'" . $value . "'";
+		}
+	}
+	
+	protected function _processWhereColumn($table, $column, $where) {
+		return $this->_quoteIdentifier($table) . '.' . $this->_quoteIdentifier($column);
+	}
+	
+	protected function _processWhereOperator($operator) {
+		switch ($operator) {
+			case '=':
+			default: return ' = '; break;
+		}
 	}
 	
 }

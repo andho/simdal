@@ -2,7 +2,7 @@
 
 class SimDAL_Session {
 	
-	static protected $_defaultAdapterClass;
+	static protected $_defaultAdapter;
 	static protected $_defaultMapper;
 	
 	protected $_adapter;
@@ -26,9 +26,9 @@ class SimDAL_Session {
 		if (!is_null($adapter_class)) {
 			$this->_adapter = $adapter_class;
 		} else {
-			$this->_adapter = self::$_defaultAdapterClass;
+			$this->_adapter = self::$_defaultAdapter;
 		}
-		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
+		/*if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
 			throw new Exception("Supplied Adapter Class is not a valid class name");
 		}
 		
@@ -38,7 +38,7 @@ class SimDAL_Session {
 		}
 		
 		$adapter_class = $this->_adapter;
-		$this->_adapter = new $adapter_class(null, $this);
+		$this->_adapter = new $adapter_class(null, $this);*/
 		
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
@@ -139,6 +139,21 @@ class SimDAL_Session {
 		}
 	}
 
+	/**
+	 * 
+	 * @return SimDAL_Query
+	 */
+	public function load($class) {
+		$query = new SimDAL_Query($this);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
+	}
+	
+	public function fetch($query) {
+		return $this->getAdapter()->returnQueryResult($query);
+	}
+	
 	protected function _resolveDependencies() {
 		foreach ($this->_new as $class=>$entities) {
 			foreach ($entities as $entity) {

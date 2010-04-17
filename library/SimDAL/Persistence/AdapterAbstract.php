@@ -631,7 +631,17 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	public function returnQueryAsObjects($sql, $class) {
 		return $this->_returnResultRows($sql, $class);
 	}
+	
+	public function returnQueryResult(SimDAL_Query $query) {
+		$sql = $this->_queryToString($query);
 		
+		if ($query->limit() == 1) {
+			return $this->_returnResultRow($sql, $query->getClass());
+		} else {
+			return $this->_returnResultRows($sql, $query->getClass());
+		}
+	}
+	
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
 			return "NULL";

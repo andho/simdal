@@ -9,6 +9,13 @@ class SimDAL_Query {
 	protected $_where = array();
 	protected $_join = array();
 	protected $_columns = array();
+	protected $_limit;
+	protected $_parent;
+	
+	public function __construct($parent=null) {
+		$this->_parent = $parent;
+		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
+	}
 	
 	public function from($entity, array $columns = array()) {
 	    $this->_columns = $columns;
@@ -31,10 +38,28 @@ class SimDAL_Query {
 		$this->_where[] = new SimDAL_Query_Where_Id($this->_from, $id);
 	}
 	
+	/**
+	 * 
+	 * @return SimDAL_Query_Where_Column
+	 */
+	public function whereColumn($column) {
+		$column = $this->_from->getColumn($column);
+		$where = new SimDAL_Query_Where_Column($this->_from, $column, $this);
+		$this->_where[] = $where;
+		
+		return $where;
+	}
+	
 	public function join($join) {
 		if ($join instanceof SimDAL_Mapper_Descendent) {
 			$this->_join[] = new SimDAL_Query_Join_Descendent($join);
 		}
+	}
+	
+	public function limit($limit=null, $offset=0) {
+		 if (is_null($limit) && $offset == 0) {
+		 	return $this->_limit->getLimit();
+		 }
 	}
 	
 	public function getFrom() {
@@ -47,6 +72,18 @@ class SimDAL_Query {
 	
 	public function getWheres() {
 		return $this->_where;
+	}
+	
+	public function getClass() {
+		return $this->_from->getClass();
+	}
+	
+	public function fetch() {
+		if (method_exists($this->_parent, 'fetch')) {
+			return $this->_parent->fetch($this);
+		}
+		
+		return false;
 	}
 	
 }
