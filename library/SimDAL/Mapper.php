@@ -14,6 +14,10 @@ class SimDAL_Mapper {
 		$this->map = $map;
 	}
 	
+	public function getClasses() {
+		return array_keys($this->map);
+	}
+	
 	public function getTable($class) {
 		if (!array_key_exists($class, $this->map)) {
 			return false;
