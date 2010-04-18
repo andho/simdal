@@ -399,12 +399,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				$commit = false;
 				break;
 			}
-			// @todo release/reinitialize arrays as they are not needed anymore
+			$this->_deletes = array();
 			
 			if (array_key_exists($class, $this->_inserts) && !$this->insertMultiple($class, $this->_inserts[$class])) {
 				$commit = false;
 				break;
 			}
+			$this->_inserts = array();
 			
 			if (array_key_exists($class, $this->_updates) && !$this->updateMultiple($class, $this->_updates[$class])) {
 				$commit = false;
@@ -573,28 +574,21 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 						throw new Exception("Foriegn Key not set for {$relation[0]} relation '{$relation[1]}' in '$class'");
 					}
 					$fk = $relation[2]['fk'];
-					
+					$pk = $this->_getMapper()->getPrimaryKey($class);
 					$key = isset($relation[2]['key']) ? $relation[2]['key'] : 'id';
 					if (isset($relation[2]['key'])) {
 						$key = $relation[2]['key'];
 					}
-					$relationEntities = $entity->$getter();
-					if (count($relationEntities) > 0) {
-						foreach ($entity->$getter() as $relationEntity) {
-							$pk = $this->_getMapper()->getPrimaryKey($class);
-							$actual = $this->getUnitOfWork()->getActual($class, $entity->$pk);
-							if (!is_null($actual)) {
-								if ($entity->$key == $actual->$key) {
+					$actual = $this->getUnitOfWork()->getActual($class, $entity->$pk);
+					if (is_null($actual) || $entity->$key != $actual->$key) {
+						$relationEntities = $entity->$getter();
+						if (count($relationEntities) > 0) {
+							foreach ($entity->$getter() as $relationEntity) {
+								if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk != null && strpos($relationEntity->$fk, 'autoincrement') === false) {
 									continue;
 								}
-								if ($relationEntity->$fk != $actual->key) {
-									continue;
-								}
+								$relationEntity->$fk = $entity->$key;
 							}
-							if (is_null($actual) && $relationEntity->$fk != -1 && $relationEntity->$fk != null && strpos($relationEntity->$fk, 'autoincrement') === false) {
-								continue;
-							}
-							$relationEntity->$fk = $entity->$key;
 						}
 					}
 					break;
