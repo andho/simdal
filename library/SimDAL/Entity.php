@@ -165,7 +165,7 @@ class SimDAL_Entity extends SimDAL_ErrorTriggerer {
 					if (!property_exists($this, $property)) {
 						throw new Exception("Property '$property' is not defined in the object of type '".get_class($this)."' yet a relationship exists");
 					}
-					$this->$property = new SimDAL_Collection();
+					$this->$property = new SimDAL_Collection($this->getAdapter());
 				}
 			}
 		}

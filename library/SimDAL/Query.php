@@ -36,6 +36,8 @@ class SimDAL_Query {
 	
 	public function whereIdIs($id) {
 		$this->_where[] = new SimDAL_Query_Where_Id($this->_from, $id);
+		
+		return $this;
 	}
 	
 	/**
@@ -56,9 +58,15 @@ class SimDAL_Query {
 		}
 	}
 	
-	public function limit($limit=null, $offset=0) {
-		 if (is_null($limit) && $offset == 0) {
+	public function limit($limit=null, $offset=null) {
+		 if (is_null($limit) && $offset == null) {
 		 	return $this->_limit->getLimit();
+		 }
+		 
+		 $this->_limit->setLimit($limit);
+		 
+		 if (!is_null($limit)) {
+		 	$this->_limit->setOffset($offset);
 		 }
 	}
 	
@@ -78,9 +86,16 @@ class SimDAL_Query {
 		return $this->_from->getClass();
 	}
 	
-	public function fetch() {
+	/**
+	 * @return SimDAL_Query_Limit
+	 */
+	public function getLimit() {
+		return $this->_limit;
+	}
+	
+	public function fetch($limit=null, $offset=null) {
 		if (method_exists($this->_parent, 'fetch')) {
-			return $this->_parent->fetch($this);
+			return $this->_parent->fetch($this, $limit, $offset);
 		}
 		
 		return false;

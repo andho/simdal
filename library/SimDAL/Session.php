@@ -2,8 +2,7 @@
 
 class SimDAL_Session {
 	
-	static protected $_defaultAdapter;
-	static protected $_defaultMapper;
+	static protected $_factory;
 	
 	protected $_adapter;
 	protected $_mapper;
@@ -14,32 +13,21 @@ class SimDAL_Session {
 	protected $_deleted = array();
 	protected $_newKey = 1;
 	
-	static public function setDefaultAdapter(SimDAL_Persistence_AdapterAbstract $adapter) {
-		self::$_defaultAdapter = $adapter;
+	/**
+	 * @return SimDAL_Session_Factory
+	 */
+	static public function factory($conf=null) {
+		if (is_null(self::$_factory)) {
+			if (is_null($conf)) {
+				throw new Exception("Need configuration when initializing Session Factory");
+			}
+			self::$_factory = new SimDAL_Session_Factory($conf);
+		}
+		
+		return self::$_factory;
 	}
 	
-	static public function setDefaultMapper(SimDAL_Mapper $mapper) {
-		self::$_defaultMapper = $mapper;
-	}
-	
-	public function __construct($mapper=null, $adapter_class=null) {
-		if (!is_null($adapter_class)) {
-			$this->_adapter = $adapter_class;
-		} else {
-			$this->_adapter = self::$_defaultAdapter;
-		}
-		/*if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
-			throw new Exception("Supplied Adapter Class is not a valid class name");
-		}
-		
-		$class_parents = class_parents($this->_adapter);
-		if (!in_array('SimDAL_Persistence_AdapterAbstract')) {
-			throw new Exception("Supplied Adapter  is not a valid Adapter Class");
-		}
-		
-		$adapter_class = $this->_adapter;
-		$this->_adapter = new $adapter_class(null, $this);*/
-		
+	public function __construct($mapper, $adapter_class, $db_conf) {
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
 		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
@@ -47,6 +35,23 @@ class SimDAL_Session {
 		} else {
 			throw new SimDAL_MapperIsNotSetException();
 		}
+		
+		if (!is_null($adapter_class)) {
+			$this->_adapter = $adapter_class;
+		}
+		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
+			throw new Exception("Supplied Adapter Class is not a valid class name");
+		}
+		
+		$class_parents = class_parents($this->_adapter);
+		if (!in_array('SimDAL_Persistence_AdapterAbstract', $class_parents)) {
+			throw new Exception("Supplied Adapter is not a valid Adapter Class");
+		}
+		
+		$adapter_class = $this->_adapter;
+		
+		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
+		SimDAL_Entity::setDefaultAdapter($this->_adapter);
 	}
 	
 	public function add($entity) {
@@ -76,7 +81,7 @@ class SimDAL_Session {
 	}
 	
 	public function update($entity) {
-		$class = $this->_getClass($entity);
+		$class = $this->getMapper()->getClassFromEntity($entity);
 		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
 		
 		if (!array_key_exists($class, $this->_modified)) {
@@ -117,7 +122,7 @@ class SimDAL_Session {
 		$error = false;
 		
 		foreach ($priority as $class) {
-			if ($this->_hasDeletesForClass($class)) {
+			if ($this->_hasDeletesFor($class)) {
 				$error = true;
 			}
 			
@@ -150,8 +155,42 @@ class SimDAL_Session {
 		return $query;
 	}
 	
-	public function fetch($query) {
+	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
+		if (is_null($offset)) {
+			$offset = 0;
+		}
+		if (is_null($limit)) {
+			$query->limit(1);
+		} else {
+			$query->limit($limit, $offset);
+		}
+		
 		return $this->getAdapter()->returnQueryResult($query);
+	}
+	
+	public function isLoaded($class, $id) {
+		if (!array_key_exists($class, $this->_modified)) {
+			return false;
+		}
+		return array_key_exists($id, $this->_modified[$class]);
+	}
+	
+	public function getLoaded($class=null, $id=null) {
+		if (!is_null($class) && !array_key_exists($class, $this->_modified) && !array_key_exists($class, $this->_new)) {
+			return null;
+		}
+		if (!is_null($id)) {
+			if (is_array($this->_modified[$class]) && array_key_exists($id, $this->_modified[$class])) {
+				return $this->_modified[$class][$id];
+			} else if (is_array($this->_new[$class]) && array_key_exists($id, $this->_new[$class])) {
+				return $this->_new[$class][$id];
+			}
+			return null;
+		}
+		if (is_null($id)) {
+			return $this->_modified[$class];
+		}
+		return $this->_modified;
 	}
 	
 	protected function _resolveDependencies() {
@@ -180,13 +219,13 @@ class SimDAL_Session {
 			$foreignKey = $association->getForeignKey();
 			switch ($association->getType()) {
 				case 'one-to-one':
-					$method = $assocation->getMethod();
+					$method = $association->getMethod();
 					$getter = 'get ' . $method;
 					$dependent = $this->$getter();
 				case 'one-to-many':
 					$method = $association->getMethod();
 					$getter = 'get' . $method;
-					$dependents = $entity->$getter();
+					$dependents = $entity->$getter(true);
 					$dependent_mapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
 					$dependent_associations_all = $dependent_mapping->getAssociations();
 					foreach ($dependent_associations_all as $dependent_association) {
@@ -220,10 +259,14 @@ class SimDAL_Session {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $mapping->getPrimaryKey();
 		foreach ($this->_modified[$class] as $key=>$entity) {
-			$this->getAdapter()->updateEntity($entity);
+			if (!$this->getAdapter()->updateEntity($entity)) {
+				return false;
+			}
 			$actual = clone($entity);
 			$this->_actual[$class][$entity->$primaryKey] = $entity;
 		}
+		
+		return true;
 	}
 	
 	protected function _distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity) {
@@ -268,7 +311,7 @@ class SimDAL_Session {
 		}
 	}
 	
-	protected function _hasDeletesForClass($class) {
+	protected function _hasDeletesFor($class) {
 		if (!array_key_exists($class, $this->_deleted) || !is_array($this->_deleted[$class]) || count($this->_deleted[$class]) <= 0) {
 			return false;
 		}
@@ -276,14 +319,24 @@ class SimDAL_Session {
 		return true;
 	}
 	
-	protected function getUsedClasses() {
+	protected function _hasInsertsFor($class) {
+		return array_key_exists($class, $this->_new);
+	}
+	
+	protected function _hasUpdatesFor($class) {
+		return array_key_exists($class, $this->_modified);
+	}
+	
+	protected function _getUsedClasses() {
 		$classes = array_keys($this->_new);
 		$classes = array_merge($classes, array_keys($this->_modified));
-		$classes = array_merge($classes, array_keys($this->_deleted['entities']));
+		if (isset($this->_deleted['entities']) && is_array($this->_deleted['entities'])) {
+			$classes = array_merge($classes, array_keys($this->_deleted['entities']));
+		}
 		return array_unique($classes);
 	}
 	
-	protected function getCommitPriority($classes) {
+	protected function _getCommitPriority($classes) {
 		return $this->getMapper()->getClassPriority($classes);
 	}
 	

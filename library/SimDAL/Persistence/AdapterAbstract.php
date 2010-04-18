@@ -105,7 +105,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			return true;
 		}
 		
-		$sql = $this->_processUpdateQuery($class, $data, $entity->$pk);
+		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
 		$result = $this->execute($sql);
 		if ($result === false) {
 			$this->_errorMessages['dberror'] = $this->getAdapterError();
@@ -428,7 +428,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 
 	protected function _returnEntities($rows, $class) {
-		$collection = new SimDAL_Collection();
+		$collection = new SimDAL_Collection($this);
 		
 		foreach ($rows as $row) {
 			$entity = $this->_returnEntity($row, $class);
@@ -445,11 +445,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _returnEntity($row, $class) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$entity = $this->_entityFromArray($row, $class);
-		if ($this->getUnitOfWork()->isLoaded($class, $entity->$pk)) {
-			return $this->getUnitOfWork()->getLoaded($class, $entity->id);
+		if ($this->_getSession()->isLoaded($class, $entity->$pk)) {
+			return $this->_getSession()->getLoaded($class, $entity->$pk);
 		}
 		
-		$this->getUnitOfWork()->updateCleanEntity($entity);
+		$this->_getSession()->update($entity);
 		return $entity;
 	}
 	
@@ -460,7 +460,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		    $entityClass = $mapping->getDescendentClass($row);
 		}
 		
-		$entity = new $entityClass();
+		$entity = new $entityClass($this, $this->_getMapper());
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
 			if (!property_exists($entity, $property)) {

@@ -9,8 +9,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	private $_conn;
 	private $_transaction = true;
 	
-	public function __construct($conf) {
-		parent::__construct();
+	public function __construct($mapper, $session, $conf) {
+		parent::__construct($mapper, $session);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
 		$this->_password = $conf['password'];
@@ -278,6 +278,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			$wheres[] = $this->_processWhere($where);
 		}
 		
+		$limit = $this->_processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
+		
 		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
 		$sql .= 'FROM ' . $query->getFrom();
 		$sql .= $joins;
@@ -285,6 +287,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		if (count($wheres) > 0) {
 			$sql .= ' WHERE ' . implode(' AND ', $wheres);
 		}
+		
+		$sql .= ' ' . $limit;
 		
 		return $sql;
 		
@@ -330,9 +334,24 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	
 	protected function _processWhereOperator($operator) {
 		switch ($operator) {
+			case 'LIKE': return ' LIKE '; break;
 			case '=':
 			default: return ' = '; break;
 		}
+	}
+	
+	protected function _processQueryLimit($limit, $offset, SimDAL_Query $query) {
+		$output = '';
+		if (is_numeric($limit)) {
+			$output = $limit;
+			if (is_numeric($offset)) {
+				$output = $offset . ", " . $output;
+			}
+			
+			$output = 'LIMIT ' . $output;
+		}
+		
+		return $output;
 	}
 	
 }

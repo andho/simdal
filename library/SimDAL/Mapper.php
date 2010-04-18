@@ -10,6 +10,10 @@ class SimDAL_Mapper {
 	protected $_priority = array();
 	protected $_priority2 = array();
 	
+	public function __construct($map) {
+		$this->map = $map;
+	}
+	
 	public function getTable($class) {
 		if (!array_key_exists($class, $this->map)) {
 			return false;

@@ -15,8 +15,8 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		self::$_verbose = $verbose;
 	}
 	
-	public function __construct(array $conf) {
-		parent::__construct();
+	public function __construct($mapper, $adapter, array $conf) {
+		parent::__construct($mapper, $adapter);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
 		$this->_password = $conf['password'];
