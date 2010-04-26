@@ -470,10 +470,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if (!array_key_exists($column[0], $row)) {
 				continue;
 			}
+			
+			$value = get_magic_quotes_runtime() ? stripslashes($row[$column[0]]) : $row[$column[0]];
+			
 			if ($column[1] == 'binary' || $column[1] == 'binary') {
-				$row[$column[0]] = base64_decode($row[$column[0]]);
+				$value = base64_decode($value);
 			}
-			$entity->$property = $row[$column[0]];
+			$entity->$property = $value;
 		}
 		
 		if ($this->_getMapper()->hasDescendants($class)) {
