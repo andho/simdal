@@ -23,27 +23,33 @@ class SimDAL_ProxyGenerator {
 	static protected function _generateProxyClass(SimDAL_Mapper_Entity $mapping) {
 		$class = $mapping->getClass();
 		$proxy_class = $class . 'Proxy';
-		$class = 'class ' . $proxy_class . ' implements SimDAL_ProxyInterface {' . PHP_EOL;
+		$class = 'class ' . $proxy_class . ' extends ' . $class . ' implements SimDAL_ProxyInterface {' . PHP_EOL;
 	}
 	
 	static protected function _generateProxyMethods(SimDAL_Mapper_Entity $mapping) {
-		$columns = $mapping->getColumns();
+		$associations = $mapping->getAssociations();
 		$methods = '';
-		foreach ($columns as $column) {
-			$methods .= self::_generateProxyMethod($column);
+		/* @var $association SimDAL_Mapper_Association */
+		foreach ($associations as $association) {
+			switch ($association->getType()) {
+				case 'one-to-many': $methods .= self::_generateProxyMethod($association, $mapping); break;
+				case 'one-to-one': $methods .= self::_ge
+			}
 		}
 		
 		return $methods;
 	}
 	
-	static protected function _generateProxyMethod(SimDAL_Mapper_Column $column) {
-		$property = ucfirst($column->getProperty());
-		$getter = 'get' . $property;
-		$setter = 'set' . $property;
+	static protected function _generateProxyMethod(SimDAL_Mapper_Association $association, SimDAL_Mapper_Entity $mapping) {
+		$method = ucfirst($association->getMethod());
+		$getter = 'get' . $method;
+		$setter = 'set' . $method;
 		
 		$method = '';
 		$method .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$method .= '		$this->load();' . PHP_EOL;
+		$method .= '		$session = Session::factory()->getCurrentSession();' . PHP_EOL;
+		$method .= '		$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
+		$method .= '			->whereColumn(\'' . $association->
 		$method .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$method .= '	}' . PHP_EOL;
 		
