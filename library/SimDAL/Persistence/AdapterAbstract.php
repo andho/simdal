@@ -399,13 +399,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				$commit = false;
 				break;
 			}
-			$this->_deletes = array();
+			$this->_deletes[$class] = array();
 			
 			if (array_key_exists($class, $this->_inserts) && !$this->insertMultiple($class, $this->_inserts[$class])) {
 				$commit = false;
 				break;
 			}
-			$this->_inserts = array();
+			$this->_inserts[$class] = array();
 			
 			if (array_key_exists($class, $this->_updates) && !$this->updateMultiple($class, $this->_updates[$class])) {
 				$commit = false;
