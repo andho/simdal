@@ -150,7 +150,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$this->_connect();
 		
 		if (is_string($value)) {
-			$value = "'$value'";
+			$value = "'" . $this->escape($value) . "'";
 		}
 		
 		$sql = $this->_processFindByColumnQuery($table, $property[0], $value, $limit);

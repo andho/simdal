@@ -4,6 +4,7 @@ class SimDAL_Mapper_Column {
 	
 	protected $_class;
 	protected $_table;
+	protected $_schema;
 	protected $_property;
 	protected $_fieldName;
 	protected $_alias;
@@ -11,15 +12,18 @@ class SimDAL_Mapper_Column {
 	protected $_primaryKey;
 	protected $_autoIncrement;
 	
-	public function __construct($class, $table, $property, $fieldname, $datatype, $primarykey=false, $autoincrement=false, $alias=null) {
-		$this->_class = $class;
-		$this->_table = $table;
+	public function __construct(SimDAL_Mapper_Entity $entity, $property, $data, $class, $table, $property, $fieldname, $datatype, $primarykey=false, $autoincrement=false, $alias=null) {
+		$this->_class = $entity->getClass();
+		$this->_table = $entity->getTable();
+		$this->_schema = $this->getSchema();
 		$this->_property = $property;
-		$this->_fieldName = $fieldname;
-		$this->_alias = $alias;
-		$this->_dataType = $datatype;
-		$this->_primaryKey = $primarykey;
-		$this->_autoIncrement = $this->_primaryKey === true ? $autoincrement : false;
+		$this->_fieldName = $data[0];
+		$this->_dataType = $data[1];
+		if (isset($data[2]) && is_array($data[2])) {
+			$this->_primaryKey = isset($data[2]['pk']) ? $data[2]['pk'] : null;
+			$this->_autoIncrement = isset($data[2]['autoIncrement']) ? $data[2]['autoIncrement'] : false;
+			$this->_alias = isset($data[2]['alias']) ? $data[2]['alias'] : null;
+		}
 	}
 	
 	public function getTable() {
@@ -28,6 +32,10 @@ class SimDAL_Mapper_Column {
 	
 	public function getClass() {
 		return $this->_class;
+	}
+	
+	public function getSchema() {
+		return $this->_schema;
 	}
 	
 	public function getProperty() {

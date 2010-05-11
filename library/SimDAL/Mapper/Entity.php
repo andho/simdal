@@ -4,6 +4,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 
 	protected $_table;
 	protected $_class;
+	protected $_schema;
 	protected $_columns = array();
 	protected $_columnsRawData = array();
 	protected $_hasAliases = false;
@@ -72,6 +73,9 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	public function __construct($class, $map) {
 		$this->_class = $class;
 		$this->_table = $map['table'];
+		if (isset($map['schema'])) {
+			$this->_schema = $map['schema'];
+		}
 		$this->_columnsRawData = $map['columns'];
 		if (isset($map['associations']) && is_array($map['associations'])) {
 			$this->_associations = $map['associations'];
@@ -163,11 +167,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	protected function _setupColumns() {
 		foreach ($this->_columnsRawData as $property=>$column_data) {
-			if (isset($data[2]) && is_array($data[2])) {
-				$pk = isset($data[2]['pk']) ? $data[2]['pk'] : null;
-				$autoIncrement = isset($data[2]['autoIncrement']) ? $data[2]['autoIncrement'] : false;
-				$alias = isset($data[2]['alias']) ? $data[2]['alias'] : null;
-			}
+			$this->_columns[$property] = new SimDAL_Mapper_Column($this, $property, $column_data);
 			$this->_columns[$property] = new SimDAL_Mapper_Column($this->getClass(), $this->getTable(), $property, $column_data[0], $column_data[1], $pk, $autoIncrement, $alias);
 			if ($column_data[2]['pk'] === true) {
 				$this->_primaryKey = $property;
