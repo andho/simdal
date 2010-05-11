@@ -41,6 +41,10 @@ class SimDAL_Query {
 		return $this->_from->getTable();
 	}
 	
+	public function getSchema() {
+		return $this->_from->getSchema();
+	}
+	
 	public function getJoins() {
 		return $this->_join;
 	}

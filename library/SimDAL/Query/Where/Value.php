@@ -18,4 +18,8 @@ class SimDAL_Query_Where_Column {
 		return $this->_column;
 	}
 	
+	public function getOperator() {
+		return '=';
+	}
+	
 }

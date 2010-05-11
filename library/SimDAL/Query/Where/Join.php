@@ -26,4 +26,8 @@ class SimDAL_Query_Where_JoinDescendant {
 		return new SimDAL_Query_Where_Column($this->_entity->getTable(), $this->_entity->getColumn($this->_descendant->getParentKey()));
 	}
 	
+	public function getOperator() {
+		return '=';
+	}
+	
 }

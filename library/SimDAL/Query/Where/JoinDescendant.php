@@ -31,4 +31,8 @@ class SimDAL_Query_Where_JoinDescendant {
 		return 'WhereJoinDescendent';
 	}
 	
+	public function getOperator() {
+		return '=';
+	}
+	
 }

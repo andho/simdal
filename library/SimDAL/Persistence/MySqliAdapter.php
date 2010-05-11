@@ -275,17 +275,24 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		
 		$wheres = array();
 		foreach ($query->getWheres() as $where) {
-			$method = '_process' . $where->getProcessMethod();
-			$wheres[] = $this->$method($where);
+			$wheres[] = $this->_processWhere($where);
 		}
 		
+		$limit = $this->_processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
+		
 		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
-		$sql .= 'FROM ' . $query->getFrom();
+		$from = $query->getFrom();
+		if (!is_null($query->getSchema())) {
+			$from = $query->getSchema() . $from;
+		}
+		$sql .= 'FROM ' . $from;
 		$sql .= $joins;
 		
 		if (count($wheres) > 0) {
 			$sql .= ' WHERE ' . implode(' AND ', $wheres);
 		}
+		
+		$sql .= ' ' . $limit;
 		
 		return $sql;
 		
@@ -299,6 +306,55 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$primary_key_column = $where->getLeftValue();
 		$output = $primary_key_column->getTable() . '.' . $primary_key_column->getColumn();
 		$output .= ' = ' . $this->_transformData($primary_key_column->getProperty(), $where->getRightValue(), $primary_key_column->getClass());
+		return $output;
+	}
+	
+	protected function _processWhere(SimDAL_Query_Where_Interface $where) {
+		if ($where instanceof SimDAL_Query_Where_Collection) {
+			//@todo do whatever is needed
+		}
+		$left = $this->_processWhereValue($where->getLeftValue(), $where);
+		$right = $this->_processWhereValue($where->getRightValue(), $where);
+		
+		$operator = $this->_processWhereOperator($where->getOperator());
+		
+		return $left . $operator . $right;
+	}
+	
+	protected function _processWhereValue($value, $where) {
+		if (is_object($value)) {
+			$class = get_class($value);
+			switch ($class) {
+				case 'SimDAL_Mapper_Column': return $this->_processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
+			}
+		} else {
+			return "'" . $value . "'";
+		}
+	}
+	
+	protected function _processWhereColumn($table, $column, $where) {
+		return $this->_quoteIdentifier($table) . '.' . $this->_quoteIdentifier($column);
+	}
+	
+	protected function _processWhereOperator($operator) {
+		switch ($operator) {
+			case 'LIKE': return ' LIKE '; break;
+			case '=':
+			default: return ' = '; break;
+		}
+	}
+	
+	protected function _processQueryLimit($limit, $offset, SimDAL_Query $query) {
+		$output = '';
+		if (is_numeric($limit)) {
+			$output = $limit;
+			if (is_numeric($offset)) {
+				$output = $offset . ", " . $output;
+			}
+			
+			$output = 'LIMIT ' . $output;
+		}
+		
 		return $output;
 	}
 	

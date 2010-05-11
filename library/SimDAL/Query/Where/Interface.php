@@ -8,4 +8,6 @@ interface SimDAL_Query_Where_Interface {
 
 	public function getLeftValue();
 	
+	public function getOperator();
+	
 }
