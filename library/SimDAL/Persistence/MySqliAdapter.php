@@ -283,7 +283,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
 		$from = $query->getFrom();
 		if (!is_null($query->getSchema())) {
-			$from = $query->getSchema() . $from;
+			$from = $query->getSchema() . '.' . $from;
 		}
 		$sql .= 'FROM ' . $from;
 		$sql .= $joins;
