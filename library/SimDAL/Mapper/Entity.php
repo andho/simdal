@@ -175,6 +175,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	protected function _setupAssociations() {
 		$associations = $this->_associations;
+		$this->_associations = array();
 		foreach ($associations as $association_data) {
 			$association = new SimDAL_Mapper_Association($this, $association_data);
 			$this->_associations[$association->getIdentifier()] = $association;
@@ -183,6 +184,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	protected function _setupDescendents() {
 	  $descendents = $this->_descendents;
+	  $this->_descendents = array();
 	  foreach ($descendents as $class=>$descendent_data) {
 	    $descendent = new SimDAL_Mapper_Descendent($this, $class, $descendent_data);
 	    $this->_descendents[$descendent->getIdentifier()] = $descendent;
