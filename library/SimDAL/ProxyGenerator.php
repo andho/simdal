@@ -2,11 +2,28 @@
 
 class SimDAL_ProxyGenerator {
 	
-	static public function generateProxies(SimDAL_Mapper $mapper) {
-		$classes = $mapper->getClasses();
-		foreach ($classes as $class) {
-			self::_generateProxy($mapper->getMappingForEntityClass($class));
+	static public function generateProxies(SimDAL_Mapper $mapper, $cachedir) {
+		$cachedir = preg_replace('/[\/\\\\]$/', '', $cachedir);
+		if (!is_dir($cachedir)) {
+			if (!mkdir($cachedir, 0775, true)) {
+				echo "Could not create cache directory";
+				return false;
+			}
 		}
+		
+		$cachefile = $cachedir . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
+		if (!is_file($cachefile)) {
+			touch($cachefile);
+		}
+		
+		$classes = $mapper->getClasses();
+		$output = '<?php' . PHP_EOL . PHP_EOL;
+		foreach ($classes as $class) {
+			$output .= self::_generateProxy($mapper->getMappingForEntityClass($class));
+		}
+		file_put_contents($cachefile, $output);
+		
+		include $cachefile;
 	}
 	
 	static protected function _generateProxy(SimDAL_Mapper_Entity $mapping) {
@@ -22,14 +39,14 @@ class SimDAL_ProxyGenerator {
 		$class .= self::_generateHelperProperties($mapping);
 		$class .= self::_generateHelperMethods($mapping);
 		$class .= self::_generateProxyMethods($mapping);
-		$class .= '}';
+		$class .= '}' . PHP_EOL . PHP_EOL;
 		
-		echo '<pre>' . $class . '</pre>';
+		return $class;
 	}
 	
 	static protected function _generateProxyClass(SimDAL_Mapper_Entity $mapping) {
 		$class = $mapping->getClass();
-		$proxy_class = $class . 'Proxy';
+		$proxy_class = $class . 'SimDALProxy';
 		$class = 'class ' . $proxy_class . ' extends ' . $class . ' implements SimDAL_ProxyInterface {' . PHP_EOL . PHP_EOL;
 		
 		return $class;
@@ -102,6 +119,7 @@ class SimDAL_ProxyGenerator {
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
 		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
 		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
+		$output .= '				->limit(null)' . PHP_EOL;
 		$output .= '			);' . PHP_EOL;
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
