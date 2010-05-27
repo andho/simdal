@@ -59,11 +59,11 @@ class SimDAL_Session {
 			return false;
 		}
 		
-		$class = $this->_getClass($entity);
+		$class = $this->getMapper()->getClassFromEntity($entity);
 		/* @var $entityMapper SimDAL_Mapper_Entity */
 		$entityMapper = $this->getMapper()->getMappingForEntityClass($class);
 		
-		$table = $this->_mapper->getTable($class);
+		$table = $entityMapper->getTable();
 		
 		if (!array_key_exists($class, $this->_new) || !is_array($this->_new[$class])) {
 			$this->_new[$class] = array();
@@ -251,7 +251,7 @@ class SimDAL_Session {
 			
 			$entity->$pk = $id;
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
-			$this->getUnitOfWork()->update($entity);
+			$this->update($entity);
 		}
 	}
 	

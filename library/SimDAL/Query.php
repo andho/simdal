@@ -63,6 +63,10 @@ class SimDAL_Query {
 		 	return $this->_limit->getLimit();
 		 }
 		 
+		 if ($limit == 0) {
+		 	$limit = null;
+		 }
+		 
 		 $this->_limit->setLimit($limit);
 		 
 		 if (!is_null($limit)) {

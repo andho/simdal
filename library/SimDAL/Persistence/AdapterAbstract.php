@@ -84,6 +84,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	public function insertEntity($entity) {
+		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$row = $this->_arrayForStorageFromEntity($entity, false, true);
 		$sql = $this->_processInsertQuery($class, $row);
 		if (($result = $this->execute($sql)) === false) {

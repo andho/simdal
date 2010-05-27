@@ -113,13 +113,13 @@ class SimDAL_ProxyGenerator {
 		
 		$output = '';
 		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if ($this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
-		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
-		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
-		$output .= '				->limit(null)' . PHP_EOL;
+		$output .= '				->whereColumn(\'' . $association->getForeignKey() . '\')' . PHP_EOL;
+		$output .= '				->equals($this->get' . ucfirst($association->getParentKey()) . '())' . PHP_EOL;
+		$output .= '				->fetch(0)' . PHP_EOL;
 		$output .= '			);' . PHP_EOL;
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
@@ -136,12 +136,13 @@ class SimDAL_ProxyGenerator {
 		
 		$output = '';
 		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if ($this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
 		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
 		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
+		$output .= '				->fetch()' . PHP_EOL;
 		$output .= '			);' . PHP_EOL;
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
@@ -158,12 +159,13 @@ class SimDAL_ProxyGenerator {
 		
 		$output = '';
 		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if ($this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
 		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
 		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
+		$output .= '				->fetch()' . PHP_EOL;
 		$output .= '			);' . PHP_EOL;
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
