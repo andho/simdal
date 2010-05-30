@@ -245,6 +245,9 @@ class SimDAL_Session {
 	protected function _commitInsertsFor($class) {
 		foreach ($this->_new[$class] as $key=>$entity) {
 			$id = $this->getAdapter()->insertEntity($entity);
+			if ($id === false) {
+				return false;
+			}
 			$class = $this->getMapper()->getClassFromEntity($entity);
 			$mapping = $this->getMapper()->getMappingForEntityClass($class);
 			$pk = $mapping->getPrimaryKey();
@@ -253,6 +256,8 @@ class SimDAL_Session {
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
 			$this->update($entity);
 		}
+		
+		return true;
 	}
 	
 	protected function _commitUpdatesFor($class) {

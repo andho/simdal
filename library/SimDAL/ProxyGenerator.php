@@ -108,6 +108,7 @@ class SimDAL_ProxyGenerator {
 	
 	static protected function _generateProxyMethodForOneToManyAssociation(SimDAL_Mapper_Association $association, SimDAL_Mapper_Entity $mapping) {
 		$method = ucfirst($association->getMethod());
+		$property = $association->getProperty();
 		$getter = 'get' . $method;
 		$setter = 'set' . $method;
 		
@@ -115,12 +116,12 @@ class SimDAL_ProxyGenerator {
 		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
 		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
-		$output .= '			$this->' . $setter . '(' . PHP_EOL;
+		$output .= '			$this->' . $property . '=' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
 		$output .= '				->whereColumn(\'' . $association->getForeignKey() . '\')' . PHP_EOL;
 		$output .= '				->equals($this->get' . ucfirst($association->getParentKey()) . '())' . PHP_EOL;
 		$output .= '				->fetch(0)' . PHP_EOL;
-		$output .= '			);' . PHP_EOL;
+		$output .= '			;' . PHP_EOL;
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;

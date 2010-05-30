@@ -28,6 +28,11 @@ class SimDAL_Mapper_Association {
 		return $this->_method;
 	}
 	
+	public function getProperty() {
+		$property = $this->getMethod;
+		$property = strtolower(substr($property, 0, 1)) . substr($property, 1);
+	}
+	
 	public function getParentMethod() {
 		return $this->_parentMethod;
 	}
