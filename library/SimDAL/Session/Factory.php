@@ -20,11 +20,11 @@ class SimDAL_Session_Factory {
 		$proxyFile = APPLICATION_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
 		if (!is_file($proxyFile)) {
 			throw new Exception('Proxy file not found');
-		}
-		if (!is_readable($proxyFile)) {
+		} else if (!is_readable($proxyFile)) {
 			throw new Exception('Unable to load proxy file');
+		} else {
+			include $proxyFile;
 		}
-		include $proxyFile;
 		
 		SimDAL_Entity::setDefaultMapper($this->_mapper);
 	}
