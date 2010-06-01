@@ -17,15 +17,6 @@ class SimDAL_Session_Factory {
 		}
 		$this->_mapper = new SimDAL_Mapper($conf['map']);
 		
-		$proxyFile = APPLICATION_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
-		if (!is_file($proxyFile)) {
-			throw new Exception('Proxy file not found');
-		} else if (!is_readable($proxyFile)) {
-			throw new Exception('Unable to load proxy file');
-		} else {
-			include $proxyFile;
-		}
-		
 		SimDAL_Entity::setDefaultMapper($this->_mapper);
 	}
 	
@@ -51,11 +42,24 @@ class SimDAL_Session_Factory {
 	 */
 	public function getCurrentSession() {
 		if (is_null($this->_session)) {
+			$proxyFile = DOMAIN_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
+			if (!is_file($proxyFile)) {
+				throw new Exception('Proxy file not found');
+			} else if (!is_readable($proxyFile)) {
+				throw new Exception('Unable to load proxy file');
+			} else {
+				include $proxyFile;
+			}
+		
 			$adapter_class = $this->_db['class'];
 			$this->_session = new SimDAL_Session($this->_mapper, $adapter_class, $this->_db);
 		}
 		
 		return $this->_session;
+	}
+	
+	public function getMapper() {
+		return $this->_mapper;
 	}
 	
 }

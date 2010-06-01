@@ -73,6 +73,14 @@ class SimDAL_ProxyGenerator {
 	
 	static protected function _generateHelperMethods(SimDAL_Mapper_Entity $mapping) {
 		$output = '';
+		$output .= '	public function __construct(array $data) {' . PHP_EOL;
+		$output .= '		foreach ($data as $key=>$value) {' . PHP_EOL;
+		$output .= '			$method = \'set\' . ucfirst($key);' . PHP_EOL; 
+		$output .= '			if (method_exists($method, $this)) {' . PHP_EOL;
+		$output .= '				$this->$method($value);' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
 		$output .= '	private function _isSimDALAssociationLoaded($association_name) {' . PHP_EOL;
 		$output .= '		if (!array_key_exists($association_name, $this->_loadedSimDALEntities)) {' . PHP_EOL;
 		$output .= '			throw new Exception(__METHOD__ . \' called with invalid association name\');' . PHP_EOL;

@@ -462,12 +462,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		$entityProxyClass = $entityClass . 'SimDALProxy';
-		$entity = new $entityProxyClass($this, $this->_getMapper());
+		$entity = new $entityProxyClass(array());
 		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$curedDate = array();
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
-			if (!property_exists($entity, $property)) {
-				continue;
-			}
 			if (!array_key_exists($column[0], $row)) {
 				continue;
 			}
@@ -476,22 +474,21 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if ($column[1] == 'binary' || $column[1] == 'binary') {
 				$value = base64_decode($value);
 			}
-			$entity->$property = $value;
+			$curedData[$property] = $value;
 		}
 		
 		if ($this->_getMapper()->hasDescendants($class)) {
 			$typeField = $this->_getMapper()->getDescendantTypeField($class);
 			$prefix = $this->_getMapper()->getDescendantClassPrefix($class);
 			foreach ($this->_getMapper()->getDescendantColumnData($class, $prefix.ucfirst($entity->$typeField)) as $property=>$column) {
-				if (!property_exists($entity, $property)) {
-					continue;
-				}
 				if (!array_key_exists($column[0], $row)) {
 					continue;
 				}
-				$entity->$property = $row[$column[0]];
+				$curedDate[$property] = $row[$column[0]];
 			}
 		}
+		
+		$entity = new $entityProxyClass($curedData);
 		
 		return $entity;
 	}

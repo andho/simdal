@@ -164,11 +164,13 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	protected function _setupColumns() {
 		foreach ($this->_columnsRawData as $property=>$column_data) {
 			$this->_columns[$property] = new SimDAL_Mapper_Column($this->getClass(), $this->getTable(), $property, $column_data[0], $column_data[1], $column_data[2]['pk'], $column_data[2]['autoIncrement'], $column_data[2]['alias']);
-			if ($column_data[2]['pk'] === true) {
-				$this->_primaryKey = $property;
-			}
-			if (isset($column_data[2]['alias']) && !$this->hasAliases()) {
-			    $this->_hasAliases = true;
+			if (array_key_exists(2, $column_data)) {
+				if (array_key_exists('pk', $column_data[2]) && $column_data[2]['pk'] === true) {
+					$this->_primaryKey = $property;
+				}
+				if (array_key_exists('alias', $column_data[2]) && !$this->hasAliases()) {
+				    $this->_hasAliases = true;
+				}
 			}
 		}
 	}
