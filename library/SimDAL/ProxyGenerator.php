@@ -75,9 +75,8 @@ class SimDAL_ProxyGenerator {
 		$output = '';
 		$output .= '	public function __construct(array $data) {' . PHP_EOL;
 		$output .= '		foreach ($data as $key=>$value) {' . PHP_EOL;
-		$output .= '			$method = \'set\' . ucfirst($key);' . PHP_EOL; 
-		$output .= '			if (method_exists($method, $this)) {' . PHP_EOL;
-		$output .= '				$this->$method($value);' . PHP_EOL;
+		$output .= '			if (property_exists($this, $key)) {' . PHP_EOL;
+		$output .= '				$this->$key = $value;' . PHP_EOL;
 		$output .= '			}' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;

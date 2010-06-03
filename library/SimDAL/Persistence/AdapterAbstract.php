@@ -450,7 +450,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			return $this->_getSession()->getLoaded($class, $entity->$pk);
 		}
 		
-		$this->_getSession()->update($entity);
+		$this->_getSession()->updateEntity($entity);
 		return $entity;
 	}
 	

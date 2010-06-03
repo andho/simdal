@@ -1,6 +1,11 @@
 <?php
 
 class SimDAL_Query {
+	
+	const TYPE_SELECT = 'select';
+	const TYPE_UPDATE = 'update';
+	const TYPE_DELETE = 'delete';
+	
 	/**
 	 * 
 	 * @var SimDAL_Mapper_Entity
@@ -11,9 +16,11 @@ class SimDAL_Query {
 	protected $_columns = array();
 	protected $_limit;
 	protected $_parent;
+	protected $_type;
 	
-	public function __construct($parent=null) {
+	public function __construct($parent=null, $type=SimDAL_Query::TYPE_SELECT) {
 		$this->_parent = $parent;
+		$this->_type = $type;
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
 	}
 	
@@ -95,6 +102,10 @@ class SimDAL_Query {
 	 */
 	public function getLimit() {
 		return $this->_limit;
+	}
+	
+	public function getType() {
+		return $this->type;
 	}
 	
 	public function fetch($limit=null, $offset=null) {

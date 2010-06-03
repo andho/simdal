@@ -54,7 +54,7 @@ class SimDAL_Session {
 		SimDAL_Entity::setDefaultAdapter($this->_adapter);
 	}
 	
-	public function add($entity) {
+	public function addEntity($entity) {
 		if ($this->isLoaded($entity)) {
 			return false;
 		}
@@ -80,7 +80,7 @@ class SimDAL_Session {
 		return true;
 	}
 	
-	public function update($entity) {
+	public function updateEntity($entity) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
 		
@@ -95,7 +95,7 @@ class SimDAL_Session {
 		$this->_actual[$class][$entity->id] = $actual;
 	}
 	
-	public function delete($entity, $class=null, $column=null) {
+	public function deleteEntity($entity, $class=null, $column=null) {
 		if (is_object($entity)) {
 			$class = $this->_getClass($entity);
 			$table = $this->_mapper->getTable($class);
@@ -141,7 +141,10 @@ class SimDAL_Session {
 			$this->getAdapter()->commit();
 		} else {
 			$this->getAdapter()->rollbackTransaction();
+			return false;
 		}
+		
+		return true;
 	}
 
 	/**
@@ -191,6 +194,13 @@ class SimDAL_Session {
 			return $this->_modified[$class];
 		}
 		return $this->_modified;
+	}
+	
+	public function update($class) {
+		$query = new SimDAL_Query($this);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
 	}
 	
 	protected function _resolveDependencies() {

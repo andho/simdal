@@ -229,6 +229,49 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	}
 	
 	protected function _queryToString(SimDAL_Query $query) {
+		$wheres = array();
+		foreach ($query->getWheres() as $where) {
+			$wheres[] = $this->_processWhere($where);
+		}
+		
+		$limit = $this->_processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
+		
+		$columns = null;
+		if ($query->getType() == SimDAL_Query::TYPE_SELECT) {
+			$columns = $this->_processQueryPrimaryTableColumns($query);
+		}
+		$joins = $this->_processQueryJoins($query, $columns);
+		
+		switch ($query->getType()) {
+			case SimDAL_Query::TYPE_SELECT:
+				$sql = 'SELECT ' . implode(', ', $columns) . ' ';
+				$sql .= 'FROM ' . $query->getFrom();
+				break;
+			case SimDAL_Query::TYPE_DELETE:
+				$sql = 'DELETE ';
+				$sql .= 'FROM ' . $query->getFrom();
+				break;
+			case SimDAL_Query::TYPE_UPDATE:
+				$sql = 'UPDATE ' . $query->getFrom();
+				$sql .= ' SET ';
+				foreach ($query->getSets() as $set) {
+					$sql .= $this->_processQuerySets($set, $query) . ', ';
+				}
+				$sql = substr($sql, 0, -2);
+		}
+		$sql .= $joins;
+		
+		if (count($wheres) > 0) {
+			$sql .= ' WHERE ' . implode(' AND ', $wheres);
+		}
+		
+		$sql .= ' ' . $limit;
+		
+		return $sql;
+		
+	}
+	
+	protected function _processQueryPrimaryTableColumns($query) {
 	    $columns = array();
 	    $columns_array = $query->getColumns();
 	    if ($query->hasAliases() || count($columns_array) > 0) {
@@ -246,7 +289,11 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	    } else {
 	        $columns[] = $query->getFrom() . '.*';
 	    }
-		
+	    
+	    return $columns;
+	}
+	
+	protected function _processQueryJoins($query, &$columns=null) {
 		/* @var $join SimDAL_Query_Join_Descendent */
 	    $joins = '';
 		foreach ($query->getJoins() as $join) {
@@ -273,26 +320,10 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			}
 		}
 		
-		$wheres = array();
-		foreach ($query->getWheres() as $where) {
-			$wheres[] = $this->_processWhere($where);
-		}
-		
-		$limit = $this->_processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
-		
-		$sql = 'SELECT ' . implode(', ', $columns) . ' ';
-		$sql .= 'FROM ' . $query->getFrom();
-		$sql .= $joins;
-		
-		if (count($wheres) > 0) {
-			$sql .= ' WHERE ' . implode(' AND ', $wheres);
-		}
-		
-		$sql .= ' ' . $limit;
-		
-		return $sql;
-		
+		return $joins;
 	}
+	
+	protected function _process
 	
 	protected function _processWhereJoinDescendent($where) {
 		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
