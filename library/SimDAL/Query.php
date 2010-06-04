@@ -17,6 +17,7 @@ class SimDAL_Query {
 	protected $_limit;
 	protected $_parent;
 	protected $_type;
+	protected $_sets = array();
 	
 	public function __construct($parent=null, $type=SimDAL_Query::TYPE_SELECT) {
 		$this->_parent = $parent;
@@ -24,9 +25,35 @@ class SimDAL_Query {
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
 	}
 	
+	/**
+	 * 
+	 * @param unknown_type $entity
+	 * @param array $columns
+	 * @return SimDAL_Query
+	 */
 	public function from($entity, array $columns = array()) {
 	    $this->_columns = $columns;
 		$this->_from = $entity;
+		
+		return $this;
+	}
+
+	/**
+	 * 
+	 * @param $column
+	 * @param $value
+	 * @return SimDAL_Query
+	 */
+	public function set($column, $value) {
+		$column = $this->_from->getColumn($column);
+		
+		if (!($column)) {
+			throw new Exception("Wrong column name specified for update");
+		}
+		
+		$this->_sets[] = new SimDAL_Query_Set($this, $column, $value);
+		
+		return $this;
 	}
 	
 	public function hasAliases() {
@@ -59,12 +86,25 @@ class SimDAL_Query {
 		return $where;
 	}
 	
+	/**
+	 * 
+	 * @param unknown_type $join
+	 * @return SimDAL_Queryy
+	 */
 	public function join($join) {
 		if ($join instanceof SimDAL_Mapper_Descendent) {
 			$this->_join[] = new SimDAL_Query_Join_Descendent($join);
 		}
+		
+		return $this;
 	}
 	
+	/**
+	 * 
+	 * @param unknown_type $limit
+	 * @param unknown_type $offset
+	 * @return SimDAL_Query
+	 */
 	public function limit($limit=null, $offset=null) {
 		 if (is_null($limit) && $offset == null) {
 		 	return $this->_limit->getLimit();
@@ -79,6 +119,8 @@ class SimDAL_Query {
 		 if (!is_null($limit)) {
 		 	$this->_limit->setOffset($offset);
 		 }
+		 
+		 return $this;
 	}
 	
 	public function getFrom() {
@@ -104,13 +146,25 @@ class SimDAL_Query {
 		return $this->_limit;
 	}
 	
+	public function getSets() {
+		return $this->_sets;
+	}
+	
 	public function getType() {
-		return $this->type;
+		return $this->_type;
 	}
 	
 	public function fetch($limit=null, $offset=null) {
 		if (method_exists($this->_parent, 'fetch')) {
 			return $this->_parent->fetch($this, $limit, $offset);
+		}
+		
+		return false;
+	}
+	
+	public function execute() {
+		if (method_exists($this->_parent, 'execute')) {
+			return $this->_parent->execute($this);
 		}
 		
 		return false;

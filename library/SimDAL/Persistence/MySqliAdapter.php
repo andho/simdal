@@ -212,6 +212,12 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return "`$column`";
 	}
 	
+	public function executeQueryObject($query) {
+		$sql = $this->_queryToString($query);
+		
+		return $this->execute($sql);
+	}
+	
 	public function execute($sql) {
 		$this->_connect();
 		
@@ -253,11 +259,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 				break;
 			case SimDAL_Query::TYPE_UPDATE:
 				$sql = 'UPDATE ' . $query->getFrom();
-				$sql .= ' SET ';
-				foreach ($query->getSets() as $set) {
-					$sql .= $this->_processQuerySets($set, $query) . ', ';
-				}
-				$sql = substr($sql, 0, -2);
+				$sets = $this->_processWhereSets($query);
+				$sql .= ' SET ' . implode(', ', $sets);
 		}
 		$sql .= $joins;
 		
@@ -323,7 +326,26 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $joins;
 	}
 	
-	protected function _process
+	protected function _processWhereSets(SimDAL_Query $query) {
+		$sets = array();
+		
+		/* @var $set SimDAL_Query_Set */
+		foreach ($query->getSets() as $set) {
+			$column = $set->getColumn();
+			$value = $set->getValue();
+			$set = $this->_processWhereColumn($column->getTable(), $column->getColumn());
+			$set .= ' = ';
+			if ($value instanceof SimDAL_Mapper_Entity) {
+				$set .= $this->_processWhereColumn($value->getTable(), $value->getColumn());
+			} else {
+				$set .= $this->_transformData($column->getColumn(), $value, $column->getClass());
+			}
+			
+			$sets[] = $set;
+		}
+		
+		return $sets;
+	}
 	
 	protected function _processWhereJoinDescendent($where) {
 		return $where->getLeftValue()->getTable() . '.' . $where->getLeftValue()->getColumn() . '=' . $where->getRightValue()->getTable() . '.' . $where->getRightValue()->getColumn();
@@ -359,7 +381,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		}
 	}
 	
-	protected function _processWhereColumn($table, $column, $where) {
+	// @todo is @where needed here
+	protected function _processWhereColumn($table, $column, $where=null) {
 		return $this->_quoteIdentifier($table) . '.' . $this->_quoteIdentifier($column);
 	}
 	

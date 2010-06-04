@@ -12,4 +12,15 @@ class SimDAL_Query_Set {
 		$this->_value = $value;
 	}
 	
+	/**
+	 * @return SimDAL_Mapper_Column
+	 */
+	public function getColumn() {
+		return $this->_column;
+	}
+	
+	public function getValue() {
+		return $this->_value;
+	}
+	
 }

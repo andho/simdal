@@ -196,11 +196,32 @@ class SimDAL_Session {
 		return $this->_modified;
 	}
 	
+	/**
+	 * @return SimDAL_Query
+	 */
 	public function update($class) {
-		$query = new SimDAL_Query($this);
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_UPDATE);
+		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
 		return $query;
+	}
+	
+	/**
+	 * 
+	 * @param string $class
+	 * @return SimDAL_Query
+	 */
+	public function delete($class) {
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_DELETE);
+		$query->limit(0);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
+	}
+	
+	public function execute(SimDAL_Query $query) {
+		return $this->getAdapter()->executeQueryObject($query);
 	}
 	
 	protected function _resolveDependencies() {
