@@ -55,6 +55,13 @@ class SimDAL_Mapper_Association {
 		return $this->_class;
 	}
 	
+	/**
+	 * @return SimDAL_Mapper_Entity
+	 */
+	public function getMapper() {
+		return $this->_entity;
+	}
+	
 	protected function _getDefaultMethod() {
 		$method = $this->_class;
 		

@@ -19,7 +19,12 @@ class SimDAL_Query {
 	protected $_type;
 	protected $_sets = array();
 	
-	public function __construct($parent=null, $type=SimDAL_Query::TYPE_SELECT) {
+	/**
+	 * 
+	 * @param SimDAL_Query_ParentInterface $parent A parent object of which the execute function will be called. Object must implement SimDAL_Query_ParentInterface
+	 * @param String $type Type of query to create. Options are 'select', 'update' and 'delete'
+	 */
+	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT) {
 		$this->_parent = $parent;
 		$this->_type = $type;
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
@@ -27,11 +32,11 @@ class SimDAL_Query {
 	
 	/**
 	 * 
-	 * @param unknown_type $entity
+	 * @param SimDAL_Mapper_Entity $entity
 	 * @param array $columns
 	 * @return SimDAL_Query
 	 */
-	public function from($entity, array $columns = array()) {
+	public function from(SimDAL_Mapper_Entity $entity, array $columns = array()) {
 	    $this->_columns = $columns;
 		$this->_from = $entity;
 		
@@ -101,11 +106,11 @@ class SimDAL_Query {
 	
 	/**
 	 * 
-	 * @param unknown_type $limit
-	 * @param unknown_type $offset
+	 * @param integer $limit
+	 * @param integer $offset
 	 * @return SimDAL_Query
 	 */
-	public function limit($limit=null, $offset=null) {
+	public function limit( $limit=null,  $offset=null) {
 		 if (is_null($limit) && $offset == null) {
 		 	return $this->_limit->getLimit();
 		 }

@@ -1,6 +1,6 @@
 <?php
 
-class SimDAL_Session {
+class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	static protected $_factory;
 	
@@ -330,7 +330,7 @@ class SimDAL_Session {
 					$method = $association->getParentM();
 					$getter = 'set' . $method;
 					$setter = 'get' . $method;
-					$dependent = $entity->$getter();
+					$dependent = $entity->$getter(false);
 					if (!is_null($dependent)) {
 						$dependent->$foreignKey = $entity->$parentKey;
 					}

@@ -15,18 +15,25 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		return $this->_data[$this->_keymap[$this->key()]];
 	}
 	public function key() {
-		return $this->_position;
+		if (!array_key_exists($this->_position, $this->_keymap)) {
+			return null;
+		}
+		return $this->_keymap[$this->_position];
 	}
 	public function next() {
 		return ++$this->_position;
 	}
 	public function valid() {
-		if (!array_key_exists($this->key(), $this->_keymap)) {
+		$key = $this->key();
+		
+		if (is_null($key)) {
 			return false;
 		}
-		if (!array_key_exists($this->_keymap[$this->key()], $this->_data)) {
+		
+		if (!array_key_exists($key, $this->_data)) {
 			return false;
 		}
+		
 		return true;
 	}
 	// end of iterator implementation
@@ -69,60 +76,10 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	}
 	// end of ArrayAccess implementation
 	
-	static protected $_defaultAdapter = null;
-	
-	protected $_adapter = null;
-	
-	protected $_populated = false;
-	
-	static public function setDefaultAdapter($adapter) {
-		if (!is_null($adapter) && !$adapter instanceof SimDAL_Persistence_AdapterAbstract ) {
-			return false;
+	public function __construct($data) {
+		foreach ($data as $key=>$value) {
+			$this[$key] = $value;
 		}
-		self::$_defaultAdapter = $adapter;
-		
-		return true;
-	}
-	
-	public function __construct($adapter = null) {
-		if ($adapter instanceof SimDAL_Persistence_AdapterAbstract) {
-			$this->_adapter = $adapter;
-		} else if (self::$_defaultAdapter instanceof SimDAL_Persistence_AdapterAbstract) {
-			$this->_adapter = self::$_defaultAdapter;
-		} else {
-			throw new Simdal_PersistenceAdapterIsNotSetException();
-		}
-	}
-	
-	public function add($entity) {
-		$this->getAdapter()->insert($entity);
-		$this[] = $entity;
-	}
-	
-	public function delete($entity) {
-		for ($i=0; $i<count($this->_keymap); $i++) {
-			if ($this->_data[$this->_keymap[$i]]->id == $entity->id) {
-				unset($this->_data[$this->_keymap[$i]]);
-				unset($this->_keymap[$i]);
-			}
-		}
-	}
-	
-	/**
-	 * returns Persistence adapter
-	 *
-	 * @return SimDAL_Persistence_AdapterAbstract
-	 */
-	public function getAdapter() {
-		return $this->_adapter;
-	}
-	
-	public function setPopulated($populated) {
-		$this->_populated = (bool)$populated;
-	}
-	
-	public function isPopulated() {
-		return $this->_populated;
 	}
 	
 	public function get($position) {

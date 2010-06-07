@@ -24,7 +24,7 @@ class SimDAL_ProxyGenerator {
 		//echo '<pre>' . $output . '</pre>';
 		file_put_contents($cachefile, $output);
 		
-		include $cachefile;
+		//include $cachefile;
 	}
 	
 	static protected function _generateProxy(SimDAL_Mapper_Entity $mapping) {
@@ -121,8 +121,11 @@ class SimDAL_ProxyGenerator {
 		$setter = 'set' . $method;
 		
 		$output = '';
-		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
+		$output .= '		if (!$this->' . $property . ' instanceof SimDAL_Collection) {' . PHP_EOL;
+		$output .= '			$this->' . $property . ' = new SimDAL_Persistence_Collection(SimDAL_Session::factory()->getCurrentSession(), $association);' . PHP_EOL;
+		$output .= '		};' . PHP_EOL;
+		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\') && $load!==false) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $property . ' =' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;

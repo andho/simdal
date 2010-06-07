@@ -429,16 +429,16 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 
 	protected function _returnEntities($rows, $class) {
-		$collection = new SimDAL_Collection($this);
+		$entities = array();
 		
 		foreach ($rows as $row) {
 			$entity = $this->_returnEntity($row, $class);
 			$entityClass = $this->_getMapper()->getClassFromEntity($entity);
 			$pk = $this->_getMapper()->getPrimaryKey($entityClass);
-			$collection[$entity->$pk] = $entity;
+			$entities[$entity->$pk] = $entity;
 		}
 		
-		$collection->setPopulated(true);
+		$collection = new SimDAL_Collection($entities);
 		
 		return $collection;
 	}
