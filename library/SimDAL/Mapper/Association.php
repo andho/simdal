@@ -55,10 +55,27 @@ class SimDAL_Mapper_Association {
 		return $this->_class;
 	}
 	
+	public function getMatchingAssociationFromAssociationClass() {
+		$foreignKey = $this->getForeignKey();
+		$parentKey = $this->getParentKey();
+		
+		$othersidemapping = $this->getMapping()->getMapper()->getMappingForEntityClass($this->getClass());
+		/* @var $otherside_association SimDAL_Mapper_Association */
+		foreach ($othersidemapping->getAssociations() as $otherside_association) {
+			if ($otherside_association->getClass() == $this->getMapping()->getClass()) {
+				if ($this->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') {
+					if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
+						
+					}
+				}
+			}
+		}
+	}
+	
 	/**
 	 * @return SimDAL_Mapper_Entity
 	 */
-	public function getMapper() {
+	public function getMapping() {
 		return $this->_entity;
 	}
 	

@@ -13,6 +13,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	protected $_descendents = array();
 	protected $_descendentTypeField;
 	protected $_descendentClassNamePrefix;
+	protected $_mapper;
 	
 	protected $_pointer = 0;
 	protected $_keymap = array();
@@ -69,7 +70,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return count($this->_columns);
 	}
 	
-	public function __construct($class, $map) {
+	public function __construct($class, $map, SimDAL_Mapper $mapper) {
 		$this->_class = $class;
 		$this->_table = $map['table'];
 		$this->_columnsRawData = $map['columns'];
@@ -82,6 +83,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		}
 		$this->_descendentTypeField = isset($map['descendentTypeField']) ? $map['descendentTypeField'] : '';
 		$this->_descendentClassNamePrefix = isset($map['descendentClassNamePrefix']) ? $map['descendentClassNamePrefix'] : '';
+		$this->_mapper = $mapper;
 		
 		$this->_setupColumns();
 		$this->_setupAssociations();
@@ -173,6 +175,13 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 				}
 			}
 		}
+	}
+	
+	/**
+	 * @return SimDAL_Mapper
+	 */
+	public function getMapper() {
+		return $this->_mapper;
 	}
 	
 	protected function _setupAssociations() {

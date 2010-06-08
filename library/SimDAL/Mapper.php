@@ -224,7 +224,8 @@ class SimDAL_Mapper {
 	 * @return SimDAL_Mapper_Entity
 	 */
 	public function getMappingForEntityClass($class) {
-	  return new SimDAL_Mapper_Entity($class, $this->map[$class]);
+		$class = $this->getDomainEntityNameFromClass($class);
+	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
 	}
 	
 	public function compare($class1, $class2) {

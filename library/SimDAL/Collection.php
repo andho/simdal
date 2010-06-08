@@ -12,7 +12,7 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		$this->_position = 0;
 	}
 	public function current() {
-		return $this->_data[$this->_keymap[$this->key()]];
+		return $this->_data[$this->key()];
 	}
 	public function key() {
 		if (!array_key_exists($this->_position, $this->_keymap)) {
@@ -110,6 +110,10 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		}
 		
 		return null;
+	}
+	
+	public function toArray() {
+		return $this->_data;
 	}
 	
 }

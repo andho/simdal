@@ -5,6 +5,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	protected $_session = null;
 	protected $_association = null;
 	protected $_populated = false;
+	protected $_parent = null;
 	
 	public function rewind() {
 		$this->_loadAll();
@@ -17,7 +18,8 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	 */
 	protected $_query = null;
 	
-	public function __construct(SimDAL_Session $session, SimDAL_Mapper_Association $association) {
+	public function __construct(SimDAL_ProxyInterface $parent, SimDAL_Session $session, SimDAL_Mapper_Association $association) {
+		$this->_parent = $parent;
 		$this->_session = $session;
 		$this->_association = $association;
 	}
@@ -49,7 +51,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	protected function _loadAll() {
 		if (!$this->_isPopulated()) {
 			$query = $this->_getQuery();
-			$collection = $this->_getSession()->fetch($query);
+			$collection = $this->_getSession()->fetch($query, 0);
 			parent::__construct($collection);
 			$this->_populated = true;
 			$this->_query = null;
@@ -81,6 +83,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		return $this->_association;
 	}
 	
+	protected function _getParent() {
+		return $this->_parent;
+	}
+	
 	/**
 	 * @return SimDAL_Query
 	 */
@@ -88,6 +94,8 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		if (is_null($this->_query)) {
 			$this->_query = new SimDAL_Query($this);
 			$this->_query->from($this->_getSession()->getMapper()->getMappingForEntityClass($this->_getAssociation()->getClass()));
+			$parentKey = $this->_getAssociation()->getParentKey();
+			$this->_query->whereColumn($this->_getAssociation()->getForeignKey())->equals($this->_getParent()->$parentKey);
 		}
 		
 		return $this->_query;

@@ -462,7 +462,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		$entityProxyClass = $entityClass . 'SimDALProxy';
-		$entity = new $entityProxyClass(array());
+		$entity = new $entityProxyClass(array(), $this->_getSession());
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$curedDate = array();
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
@@ -471,6 +471,16 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			}
 			$value = $row[$column[0]];
 			$value = !is_null($value) && get_magic_quotes_runtime() ? stripslashes($value) : $value;
+			switch($column[1]) {
+				case 'binary':
+				case 'blob': $value = base64_decode($value); break;
+				case 'varchar':
+				case 'text':
+				case 'date':
+				case 'datetime': break;
+				case 'float': $value = (float)$value; break;
+				case 'int': $value = (int)$value; break;
+			}
 			if ($column[1] == 'binary' || $column[1] == 'binary') {
 				$value = base64_decode($value);
 			}
@@ -488,7 +498,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			}
 		}
 		
-		$entity = new $entityProxyClass($curedData);
+		$entity = new $entityProxyClass($curedData, $this->_getSession());
 		
 		return $entity;
 	}

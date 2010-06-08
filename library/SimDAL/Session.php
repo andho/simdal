@@ -244,17 +244,32 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$processed = array();
 		
+		//@todo pass dependents to parents and parents to dependents
+		
+		
 		/* @var $association SimDAL_Mapper_Association */
 		foreach ($associations as $association) {
+			$method = $association->getMethod();
+			
 			$parentKey = $association->getParentKey();
 			$foreignKey = $association->getForeignKey();
+			
+			$othersidemapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
+			/* @var $otherside_association SimDAL_Mapper_Association */
+			foreach ($othersidemapping->getAssociations() as $otherside_association) {
+				if ($otherside_association->getClass() == $class) {
+					if ($association->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') {
+						if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
+							
+						}
+					}
+				}
+			}
 			switch ($association->getType()) {
 				case 'one-to-one':
-					$method = $association->getMethod();
 					$getter = 'get ' . $method;
 					$dependent = $this->$getter();
 				case 'one-to-many':
-					$method = $association->getMethod();
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter(true);
 					$dependent_mapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
@@ -339,7 +354,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 					$method = $association->getMethod();
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter();
-					foreach ($dependents as $dependent) {
+					foreach ($dependents->toArray() as $dependent) {
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
 					break;

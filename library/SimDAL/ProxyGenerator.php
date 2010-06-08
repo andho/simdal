@@ -57,6 +57,8 @@ class SimDAL_ProxyGenerator {
 		$associations = $mapping->getAssociations();
 		$output = '';
 		
+		$output .= 'protected $_session;' . PHP_EOL;
+		
 		/* @var $association SimDAL_Mapper_Association */
 		if (count($associations)) {
 			$output = '';
@@ -73,7 +75,8 @@ class SimDAL_ProxyGenerator {
 	
 	static protected function _generateHelperMethods(SimDAL_Mapper_Entity $mapping) {
 		$output = '';
-		$output .= '	public function __construct(array $data) {' . PHP_EOL;
+		$output .= '	public function __construct(array $data, SimDAL_Session $session) {' . PHP_EOL;
+		$output .= '		$this->_session = $session;' . PHP_EOL;
 		$output .= '		foreach ($data as $key=>$value) {' . PHP_EOL;
 		$output .= '			if (property_exists($this, $key)) {' . PHP_EOL;
 		$output .= '				$this->$key = $value;' . PHP_EOL;
@@ -91,6 +94,9 @@ class SimDAL_ProxyGenerator {
 		$output .= '			throw new Exception(__METHOD__ . \' called with invalid association name\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		$this->_loadedSimDALEntities[$association_name] = true;' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		$output .= '	private function _getSession() {' . PHP_EOL;
+		$output .= '		return $this->_session;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;
@@ -123,17 +129,16 @@ class SimDAL_ProxyGenerator {
 		$output = '';
 		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
 		$output .= '		if (!$this->' . $property . ' instanceof SimDAL_Collection) {' . PHP_EOL;
-		$output .= '			$this->' . $property . ' = new SimDAL_Persistence_Collection(SimDAL_Session::factory()->getCurrentSession(), $association);' . PHP_EOL;
-		$output .= '		};' . PHP_EOL;
-		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\') && $load!==false) {' . PHP_EOL;
-		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
-		$output .= '			$this->' . $property . ' =' . PHP_EOL;
-		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
-		$output .= '				->whereColumn(\'' . $association->getForeignKey() . '\')' . PHP_EOL;
-		$output .= '				->equals($this->get' . ucfirst($association->getParentKey()) . '())' . PHP_EOL;
-		$output .= '				->fetch(0)' . PHP_EOL;
-		$output .= '			;' . PHP_EOL;
-		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+		$output .= '			$session = $this->_getSession();' . PHP_EOL;
+		$output .= '			$mapper = $session->getMapper();' . PHP_EOL;
+		$output .= '			$mapping = $mapper->getMappingForEntityClass(get_class($this));' . PHP_EOL;
+		$output .= '			foreach ($mapping->getAssociations() as $assoc) {' . PHP_EOL;
+		$output .= '				if (\'' . $property . '\' == $assoc->getProperty()) {' . PHP_EOL;
+		$output .= '					$association = $assoc;' . PHP_EOL;
+		$output .= '					break;' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '			$this->' . $property . ' = new SimDAL_Persistence_Collection($this, $session, $association);' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
