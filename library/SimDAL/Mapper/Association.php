@@ -9,6 +9,7 @@ class SimDAL_Mapper_Association {
 	protected $_parentKey;
 	protected $_method;
 	protected $_parentMethod;
+	protected $_isParentAssociation;
 	
 	public function __construct(SimDAL_Mapper_Entity $entity, $data) {
 		$this->_entity = $entity;
@@ -18,6 +19,7 @@ class SimDAL_Mapper_Association {
 		$this->_parentKey = isset($data[2]['key']) ? $data[2]['key'] : $this->_entity->getPrimaryKey();
 		$this->_method = isset($data[2]['method']) ? $data[2]['method'] : $this->_getDefaultMethod();
 		$this->_parentMethod = isset($data[2]['parentMethod']) ? $data[2]['parentMethod'] : null;
+		$this->_isParentAssociation = $this->_determineIfParentAssociation($data);
 	}
 	
 	public function getIdentifier() {
@@ -55,6 +57,17 @@ class SimDAL_Mapper_Association {
 		return $this->_class;
 	}
 	
+	public function isParent() {
+		return $this->_isParentAssociation;
+	}
+	
+	public function isDependent() {
+		return !$this->_isParentAssociation;
+	}
+	
+	/**
+	 * @return SimDAL_Mapper_Association
+	 */
 	public function getMatchingAssociationFromAssociationClass() {
 		$foreignKey = $this->getForeignKey();
 		$parentKey = $this->getParentKey();
@@ -65,7 +78,7 @@ class SimDAL_Mapper_Association {
 			if ($otherside_association->getClass() == $this->getMapping()->getClass()) {
 				if ($this->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') {
 					if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
-						
+						return $otherside_association;
 					}
 				}
 			}
@@ -87,6 +100,20 @@ class SimDAL_Mapper_Association {
 		}
 		
 		return $method;
+	}
+	
+	protected function _determineIfParentAssociation($data) {
+		if ($data[0] === 'one-to-one') {
+			if (isset($data[2]) && isset($data[2]['parent']) && $data[2]['parent'] === true) {
+				return true;
+			}
+		}
+		
+		if ($data[0] === 'one-to-many') {
+			return true;
+		}
+		
+		return false;
 	}
 	
 }

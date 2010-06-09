@@ -254,34 +254,26 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$parentKey = $association->getParentKey();
 			$foreignKey = $association->getForeignKey();
 			
-			$othersidemapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
-			/* @var $otherside_association SimDAL_Mapper_Association */
-			foreach ($othersidemapping->getAssociations() as $otherside_association) {
-				if ($otherside_association->getClass() == $class) {
-					if ($association->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') {
-						if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
-							
-						}
-					}
-				}
-			}
+			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
+			$otherside_method = $matching_assoc->getMethod();
+			$otherside_setter = 'set' . $otherside_method;
+			
 			switch ($association->getType()) {
 				case 'one-to-one':
-					$getter = 'get ' . $method;
-					$dependent = $this->$getter();
+				case 'many-to-one':
+					if ($association->isDependent()) {
+						$getter = 'get ' . $method;
+						$dependent = $entity->$getter(true);
+						$entity->$foreignKey = $dependent->$parentKey;
+						$dependent->$otherside_setter($entity);
+					}
+					break;
 				case 'one-to-many':
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter(true);
-					$dependent_mapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
-					$dependent_associations_all = $dependent_mapping->getAssociations();
-					foreach ($dependent_associations_all as $dependent_association) {
-						if ($class == $dependent_association->getClass() && $foreignKey == $dependent_association->getForeignKey()) {
-							break;
-						}
-					}
 					foreach ($dependents as $dependent) {
-						$method = $dependent_association->getMethod();
-						$dependent->$method($entity);
+						$dependent->$otherside_setter($entity);
+						$dependent->$foreignKey = $entity->$parentKey;
 					}
 					break;
 			}

@@ -730,6 +730,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
+		$data = $entity->_SimDAL_toArray();
 		
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		
@@ -739,13 +740,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if ($pk === $key) {
 				continue;
 			}
-			if (!$includeNull && is_null($entity->$key)) {
+			if (!$includeNull && is_null($data[$key])) {
 				continue;
 			}
 			if ($transformData) {
-				$array[$value[0]] = $this->_transformData($key, $entity->$key, $class);
+				$array[$value[0]] = $this->_transformData($key, $data[$key], $class);
 			} else {
-				$array[$value[0]] = $entity->$key;
+				$array[$value[0]] = $data[$key];
 			}
 		}
 		

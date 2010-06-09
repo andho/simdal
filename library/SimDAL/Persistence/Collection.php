@@ -29,7 +29,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		if (!$entity instanceof $class) {
 			throw new Exception('Object of invalid class has been passed');
 		}
-		$this->_getSession()->addEntity($entity);
+		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
+		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey)) {
+			$this->_getSession()->addEntity($entity);
+		}
 		$this[] = $entity;
 	}
 	
