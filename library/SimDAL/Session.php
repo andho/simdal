@@ -196,6 +196,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		return $this->_modified;
 	}
 	
+	public function getActualFromEntity($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$associations = $mapping->getAssociations();
+		$primaryKey = $mapping->getPrimaryKeyColumn();
+		if (is_array($this->_modified[$class]) && array_key_exists($entity->$primaryKey, $this->_modified[$class])) {
+			return $this->_modified[$class][$entity->$primaryKey];
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * @return SimDAL_Query
 	 */
@@ -238,14 +250,11 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$associations = $mapping->getAssociations();
 		$primaryKey = $mapping->getPrimaryKeyColumn();
 		
+		$actual = $this->getActualFromEntity($entity);
+		
 		if (!is_array($associations) || count($associations) <= 0) {
 			return;
 		}
-		
-		$processed = array();
-		
-		//@todo pass dependents to parents and parents to dependents
-		
 		
 		/* @var $association SimDAL_Mapper_Association */
 		foreach ($associations as $association) {
@@ -269,12 +278,19 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 					}
 					break;
 				case 'one-to-many':
+					if ($entity->$parentKey !== $actual->$parentKey) {
+						continue;
+					}
+					
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter(true);
 					foreach ($dependents as $dependent) {
 						$dependent->$otherside_setter($entity);
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
+					
+					$this->update($association->getClass())->set($foreignKey, $entity->$parentKey)->whereColumn($foreignKey)->equals($entity->$parentKey)->execute();
+					
 					break;
 			}
 		}
