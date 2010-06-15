@@ -16,8 +16,6 @@ class SimDAL_Session_Factory {
 			throw new Exception("SimDAL configuration doesn't have mapper configuration");
 		}
 		$this->_mapper = new SimDAL_Mapper($conf['map']);
-		
-		SimDAL_Entity::setDefaultMapper($this->_mapper);
 	}
 	
 	protected function _setupDatabaseSettings($db) {

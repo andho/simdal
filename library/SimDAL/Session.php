@@ -51,17 +51,22 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$adapter_class = $this->_adapter;
 		
 		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
-		SimDAL_Entity::setDefaultAdapter($this->_adapter);
 	}
 	
-	public function addEntity($entity) {
+	public function addEntity(&$entity) {
 		if ($this->isLoaded($entity)) {
 			return false;
 		}
 		
+		
+		
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		/* @var $entityMapper SimDAL_Mapper_Entity */
 		$entityMapper = $this->getMapper()->getMappingForEntityClass($class);
+		
+		$proxyClass = $class . 'SimDALProxy';
+		$proxy = new $proxyClass($entity, $this);
+		$entity = $proxy;
 		
 		$table = $entityMapper->getTable();
 		
@@ -120,7 +125,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$this->getAdapter()->startTransaction();
 		
 		$error = false;
-		
+		try {
 		foreach ($priority as $class) {
 			if ($this->_hasDeletesFor($class)) {
 				$error = true;
@@ -136,13 +141,12 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 				break;
 			}
 		}
-		
-		if (!$error) {
-			$this->getAdapter()->commit();
-		} else {
+		} catch (Exception $e) {
 			$this->getAdapter()->rollbackTransaction();
-			return false;
+			throw $e;
 		}
+		
+		$this->getAdapter()->commit();
 		
 		return true;
 	}
@@ -169,6 +173,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 		
 		return $this->getAdapter()->returnQueryResult($query);
+	}
+	
+	public function isAdded($class, $id) {
+		if (!array_key_exists($class, $this->_new)) {
+			return false;
+		}
+		return array_key_exists($id, $this->_new[$class]);
 	}
 	
 	public function isLoaded($class, $id) {
@@ -266,15 +277,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
 			$otherside_method = $matching_assoc->getMethod();
 			$otherside_setter = 'set' . $otherside_method;
+			$otherside_getter = 'get' . $otherside_method;
 			
 			switch ($association->getType()) {
 				case 'one-to-one':
 				case 'many-to-one':
 					if ($association->isDependent()) {
-						$getter = 'get ' . $method;
-						$dependent = $entity->$getter(true);
-						$entity->$foreignKey = $dependent->$parentKey;
-						$dependent->$otherside_setter($entity);
+						$getter = 'get' . $method;
+						$dependent = $entity->$getter(false);
+						if (!is_null($dependent)) {
+							$entity->$foreignKey = $dependent->$parentKey;
+							$dependent->$otherside_getter()->add($entity);
+						}
 					}
 					break;
 				case 'one-to-many':
@@ -283,8 +297,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 					}
 					
 					$getter = 'get' . $method;
-					$dependents = $entity->$getter(true);
-					foreach ($dependents as $dependent) {
+					$dependents = $entity->$getter();
+					foreach ($dependents->toArray() as $dependent) {
 						$dependent->$otherside_setter($entity);
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
@@ -362,7 +376,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 					$method = $association->getMethod();
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter();
-					foreach ($dependents->toArray() as $dependent) {
+					foreach ($dependents->toArray(false) as $dependent) {
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
 					break;

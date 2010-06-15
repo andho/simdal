@@ -76,7 +76,8 @@ class SimDAL_Mapper_Association {
 		/* @var $otherside_association SimDAL_Mapper_Association */
 		foreach ($othersidemapping->getAssociations() as $otherside_association) {
 			if ($otherside_association->getClass() == $this->getMapping()->getClass()) {
-				if ($this->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') {
+				if ( ($this->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') ||
+					($this->getType() == 'many-to-one' && $otherside_association->getType() == 'one-to-many') ) {
 					if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
 						return $otherside_association;
 					}

@@ -75,7 +75,10 @@ class SimDAL_ProxyGenerator {
 	
 	static protected function _generateHelperMethods(SimDAL_Mapper_Entity $mapping) {
 		$output = '';
-		$output .= '	public function __construct(array $data, SimDAL_Session $session) {' . PHP_EOL;
+		$output .= '	public function __construct($data, SimDAL_Session $session) {' . PHP_EOL;
+		$output .= '		if (!is_array($data) && !is_object($data)) {' . PHP_EOL;
+		$output .= '			return false;' . PHP_EOL;
+		$output .= '		}' . PHP_EOL . PHP_EOL;
 		$output .= '		$this->_session = $session;' . PHP_EOL;
 		$output .= '		foreach ($data as $key=>$value) {' . PHP_EOL;
 		$output .= '			if (property_exists($this, $key)) {' . PHP_EOL;
@@ -127,7 +130,7 @@ class SimDAL_ProxyGenerator {
 		$setter = 'set' . $method;
 		
 		$output = '';
-		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
+		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
 		$output .= '		if (!$this->' . $property . ' instanceof SimDAL_Collection) {' . PHP_EOL;
 		$output .= '			$session = $this->_getSession();' . PHP_EOL;
 		$output .= '			$mapper = $session->getMapper();' . PHP_EOL;
@@ -152,8 +155,8 @@ class SimDAL_ProxyGenerator {
 		$setter = 'set' . $method;
 		
 		$output = '';
-		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
+		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
@@ -175,8 +178,8 @@ class SimDAL_ProxyGenerator {
 		$setter = 'set' . $method;
 		
 		$output = '';
-		$output .= '	public function ' . $getter . '() {' . PHP_EOL;
-		$output .= '		if (!$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
+		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
+		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;

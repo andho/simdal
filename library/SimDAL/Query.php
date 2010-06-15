@@ -73,6 +73,10 @@ class SimDAL_Query {
 	    $this->_from->getColumns();
 	}
 	
+	/**
+	 * @param string $id Primary Key of the entity
+	 * @return SimDAL_Query
+	 */
 	public function whereIdIs($id) {
 		$this->_where[] = new SimDAL_Query_Where_Id($this->_from, $id);
 		
