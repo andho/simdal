@@ -74,16 +74,43 @@ class SimDAL_ProxyGenerator {
 	}
 	
 	static protected function _generateHelperMethods(SimDAL_Mapper_Entity $mapping) {
+		$associations = $mapping->getAssociations();
+		
 		$output = '';
 		$output .= '	public function __construct($data, SimDAL_Session $session) {' . PHP_EOL;
 		$output .= '		if (!is_array($data) && !is_object($data)) {' . PHP_EOL;
 		$output .= '			return false;' . PHP_EOL;
 		$output .= '		}' . PHP_EOL . PHP_EOL;
 		$output .= '		$this->_session = $session;' . PHP_EOL;
-		$output .= '		foreach ($data as $key=>$value) {' . PHP_EOL;
-		$output .= '			if (property_exists($this, $key)) {' . PHP_EOL;
-		$output .= '				$this->$key = $value;' . PHP_EOL;
+		$output .= '		if (is_array($data)) {' . PHP_EOL;
+		$output .= '			foreach ($data as $key=>$value) {' . PHP_EOL;
+		$output .= '				if (property_exists($this, $key)) {' . PHP_EOL;
+		$output .= '					$this->$key = $value;' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
 		$output .= '			}' . PHP_EOL;
+		$output .= '		} else if (is_object($data)) {' . PHP_EOL;
+		
+		foreach ($mapping->getColumns() as $columnName=>$column) {
+			$output .= '			if (method_exists($data, \'get' . $columnName . '\')) {' . PHP_EOL;
+			$output .= '				$this->set' . $columnName . '($data->get' . $columnName . '());' . PHP_EOL;
+			$output .= '			}' . PHP_EOL;
+		}
+		
+		/* @var $association SimDAL_Mapper_Association */
+		foreach ($associations as $association) {
+			$method = ucfirst($association->getMethod());
+			$property = $association->getProperty();
+			$setter = 'set' . $method;
+			$getter = 'get' . $method;
+			$output .= '			if (method_exists($data, \'' . $getter . '\')) {' . PHP_EOL;
+			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
+				$output .= '				$this->' . $setter . '($data->' . $getter . '());' . PHP_EOL;
+			} else if ($association->getType() == 'one-to-many') {
+				$output .= '				$this->' . $property . ' = $data->' . $getter . '();' . PHP_EOL;
+			}
+			$output .= '			}' . PHP_EOL;
+		}
+		
 		$output .= '		}' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		$output .= '	private function _isSimDALAssociationLoaded($association_name) {' . PHP_EOL;

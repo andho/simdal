@@ -136,7 +136,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		return $this->_populated;
 	}
 	
-	public function fetch(SimDAL_Query $query, $limit, $offset) {
+	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
 		$this->_query = null;
 		return $this->_getSession()->fetch($query, $limit, $offset);
 	}
