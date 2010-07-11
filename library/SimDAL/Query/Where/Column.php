@@ -45,8 +45,117 @@ class SimDAL_Query_Where_Column implements SimDAL_Query_Where_Interface {
 		return $this->_query;
 	}
 	
-	public function like($value) {
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isEqualTo($value) {
+		return $this->equals($value);
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isNotEqualTo($value) {
+		$this->_comparison = '!=';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isLike($value) {
 		$this->_comparison = 'LIKE';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isGreaterThan($value) {
+		$this->_comparison = '>';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isGreaterThanOrEqualTo($value) {
+		$this->_comparison = '>=';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isLessThan($value) {
+		$this->_comparison = '<';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value
+	 * @return SimDAL_Query
+	 */
+	public function isLessThanOrEqualTo($value) {
+		$this->_comparison = '<=';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value1
+	 * @param string $value2
+	 * @return SimDAL_Query
+	 */
+	public function isBetween($value1, $value2) {
+		$this->_comparison = 'BETWEEN';
+		$this->_value = new SimDAL_Query_Where_Value_Range($value1, $value2);
+		
+		return $this->_query;
+	}
+	
+	/**
+	 * 
+	 * @param string $value1
+	 * @param string $value2
+	 * @return SimDAL_Query
+	 */
+	public function isInRange($value1, $value2) {
+		return $this->isBetween($value1, $value2);
+	}
+	
+	/**
+	 * 
+	 * @param array $value
+	 * @return SimDAL_Query
+	 */
+	public function isIn(array $value) {
+		$this->_comparison = 'IN';
 		$this->_value = $value;
 		
 		return $this->_query;

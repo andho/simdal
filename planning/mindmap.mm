@@ -1,4 +1,4 @@
-<map version="0.8.1">
+<map version="0.9.0">
 <!-- To view this file, download free mind mapping software FreeMind from http://freemind.sourceforge.net -->
 <node CREATED="1243275503943" ID="Freemind_Link_377067031" MODIFIED="1243275510037" TEXT="Domain">
 <node CREATED="1243275760099" ID="Freemind_Link_66902600" MODIFIED="1243275764662" POSITION="right" TEXT="questions">
@@ -18,6 +18,18 @@
 <node CREATED="1250966208056" ID="Freemind_Link_1970406391" MODIFIED="1250966227082" TEXT="should load information about the entities such as relations into the entity manager"/>
 </node>
 <node CREATED="1249752803405" ID="Freemind_Link_117786034" MODIFIED="1249752850140" TEXT="have to take into account all the syntax that will be needed"/>
+</node>
+</node>
+<node CREATED="1278415183684" ID="ID_1692987069" MODIFIED="1278415185647" POSITION="right" TEXT="Proxy">
+<node CREATED="1278415186531" ID="ID_427935502" MODIFIED="1278415257688" TEXT="?should load the related mapping when user tries to get or set the relation"/>
+</node>
+<node CREATED="1278413978853" ID="ID_1646577673" MODIFIED="1278413985829" POSITION="right" TEXT="Domain Autoloader">
+<node CREATED="1278413985830" ID="ID_1008870720" MODIFIED="1278414007663" TEXT="Should load domain configuration and class mapping with the class"/>
+<node CREATED="1278414008243" ID="ID_1994664048" MODIFIED="1278414016930" TEXT="steps">
+<node CREATED="1278414016932" ID="ID_1277316258" MODIFIED="1278414032652" TEXT="determine the domain and its folder"/>
+<node CREATED="1278414033153" ID="ID_1827294247" MODIFIED="1278414050443" TEXT="check if the domain configuration was already loaded"/>
+<node CREATED="1278414050863" ID="ID_649161680" MODIFIED="1278414056938" TEXT="if not load the configuration"/>
+<node CREATED="1278414058862" ID="ID_890123721" MODIFIED="1278416131648" TEXT="find a way to seperate mapping for seperate classes"/>
 </node>
 </node>
 </node>

@@ -12,6 +12,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected $_actual = array();
 	protected $_deleted = array();
 	protected $_newKey = 1;
+	protected $_lockRows = false;
 	
 	/**
 	 * @return SimDAL_Session_Factory
@@ -53,16 +54,26 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
 	}
 	
+	public function startTransaction() {
+		if ($this->_lockRows !== true) {
+			$this->getAdapter()->startTransaction();
+			$this->_lockRows = true;
+		}
+	}
+	
+	public function rollback() {
+		$this->_lockRows = false;
+	}
+	
 	public function addEntity(&$entity) {
 		if ($this->isLoaded($entity)) {
 			return false;
 		}
 		
-		
-		
-		$class = $this->getMapper()->getClassFromEntity($entity);
+		$domain_entity_name = $this->getMapper()->getClassFromEntity($entity);
+		$class = $this->getMapper()->getDescendentEntityClass($entity, $domain_entity_name);
 		/* @var $entityMapper SimDAL_Mapper_Entity */
-		$entityMapper = $this->getMapper()->getMappingForEntityClass($class);
+		$entityMapper = $this->getMapper()->getMappingForEntityClass($domain_entity_name);
 		
 		$proxyClass = $class . 'SimDALProxy';
 		$proxy = new $proxyClass($entity, $this);
@@ -70,17 +81,11 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$table = $entityMapper->getTable();
 		
-		if (!array_key_exists($class, $this->_new) || !is_array($this->_new[$class])) {
-			$this->_new[$class] = array();
+		if (!array_key_exists($domain_entity_name, $this->_new) || !is_array($this->_new[$domain_entity_name])) {
+			$this->_new[$domain_entity_name] = array();
 		}
 		
-		$pk = $entityMapper->getPrimaryKey();
-		$column = $entityMapper->getPrimaryKeyColumn();
-		if ($column->isAutoIncrement()) {
-			$entity->$pk = 'autoincrement'.$this->_newKey++;
-		}
-		
-		$this->_new[$class][$entity->$pk] = $entity;
+		$this->_new[$domain_entity_name][] = $entity;
 		
 		return true;
 	}
@@ -88,16 +93,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	public function updateEntity($entity) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $entityMapping->getPrimaryKey();
+		$pk_getter = 'get' . $primaryKey;
 		
 		if (!array_key_exists($class, $this->_modified)) {
 			$this->_modified[$class] = array();
 			$this->_actual[$class] = array();
 		}
 		
-		$this->_modified[$class][$entity->id] = $entity;
+		$this->_modified[$class][$entity->$pk_getter()] = $entity;
 		
 		$actual = clone($entity);
-		$this->_actual[$class][$entity->id] = $actual;
+		$this->_actual[$class][$entity->$pk_getter()] = $actual;
 	}
 	
 	public function deleteEntity($entity, $class=null, $column=null) {
@@ -122,7 +129,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$classes = $this->_getUsedClasses();
 		$priority = $this->_getCommitPriority($classes);
 		
-		$this->getAdapter()->startTransaction();
+		$this->startTransaction();
 		
 		$error = false;
 		try {
@@ -148,6 +155,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$this->getAdapter()->commit();
 		
+		$this->_lockRows = false;
+		
 		return true;
 	}
 
@@ -162,6 +171,11 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		return $query;
 	}
 	
+	public function count(SimDAL_Query $query) {
+		$query->from($query->getMapping(), array('count'=>'COUNT(*)'));
+		return $this->getAdapter()->returnQueryResultAsArray($query);
+	}
+	
 	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
 		if (is_null($offset)) {
 			$offset = 0;
@@ -172,17 +186,27 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$query->limit($limit, $offset);
 		}
 		
-		return $this->getAdapter()->returnQueryResult($query);
+		return $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
 	}
 	
-	public function isAdded($class, $id) {
+	public function isAdded($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
 		if (!array_key_exists($class, $this->_new)) {
 			return false;
 		}
-		return array_key_exists($id, $this->_new[$class]);
+		return in_array($entity, $this->_new[$class]);
 	}
 	
-	public function isLoaded($class, $id) {
+	public function isLoaded($class, $id=null) {
+		if (is_object($class)) {
+			$entity = $class;
+			$class = $this->getMapper()->getClassFromEntity($class);
+			
+			$pk = $this->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
+			$getter = 'get' . ucfirst($pk);
+			$id = $entity->$getter();
+		}
+		
 		if (!array_key_exists($class, $this->_modified)) {
 			return false;
 		}
@@ -211,7 +235,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$associations = $mapping->getAssociations();
-		$primaryKey = $mapping->getPrimaryKeyColumn();
+		$primaryKey = $mapping->getPrimaryKey();
 		if (is_array($this->_modified[$class]) && array_key_exists($entity->$primaryKey, $this->_modified[$class])) {
 			return $this->_modified[$class][$entity->$primaryKey];
 		}
@@ -287,7 +311,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 						$dependent = $entity->$getter(false);
 						if (!is_null($dependent)) {
 							$entity->$foreignKey = $dependent->$parentKey;
-							$dependent->$otherside_getter()->add($entity);
+							$dependent->$otherside_getter()->add($entity, false);
 						}
 					}
 					break;
@@ -320,7 +344,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$mapping = $this->getMapper()->getMappingForEntityClass($class);
 			$pk = $mapping->getPrimaryKey();
 			
-			$entity->$pk = $id;
+			$entity->_SimDAL_setPrimaryKey($id);
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
 			$this->update($entity);
 		}

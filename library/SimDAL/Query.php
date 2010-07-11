@@ -18,6 +18,7 @@ class SimDAL_Query {
 	protected $_parent;
 	protected $_type;
 	protected $_sets = array();
+	protected $_orderBy = null;
 	
 	/**
 	 * 
@@ -87,9 +88,24 @@ class SimDAL_Query {
 	 * 
 	 * @return SimDAL_Query_Where_Column
 	 */
-	public function whereColumn($column) {
-		$column = $this->_from->getColumn($column);
-		$where = new SimDAL_Query_Where_Column($this->_from, $column, $this);
+	public function whereColumn($column, $entity=null) {
+		return $this->whereProperty($column, $entity);
+	}
+	
+	public function whereProperty($property, $entity=null) {
+		if (is_null($entity)) {
+			$entity = $this->_from;
+		} else if ($this->_from->getClass() == $entity) {
+			$entity = $this->_from;
+		}
+		/* @var $entity SimDAL_Mapper_Entity */
+		$column = $entity->getColumn($property);
+		
+		if (!$column) {
+			throw new Exception("Property '$property' does not exist in Entity '" . $entity->getClass() . "'");
+		}
+		
+		$where = new SimDAL_Query_Where_Column($entity, $column, $this);
 		$this->_where[] = $where;
 		
 		return $where;
@@ -98,7 +114,7 @@ class SimDAL_Query {
 	/**
 	 * 
 	 * @param unknown_type $join
-	 * @return SimDAL_Queryy
+	 * @return SimDAL_Query
 	 */
 	public function join($join) {
 		if ($join instanceof SimDAL_Mapper_Descendent) {
@@ -132,12 +148,39 @@ class SimDAL_Query {
 		 return $this;
 	}
 	
+	/**
+	 * 
+	 * @param string $column
+	 * @return SimDAL_Query
+	 */
+	public function orderBy($column) {
+		$column = $this->_from->getColumn($column);
+		$this->_orderBy = new SimDAL_Query_OrderBy($column);
+		
+		return $this;
+	}
+	
+	/**
+	 * @return SimDAL_Mapper_Entity
+	 */
 	public function getFrom() {
 		return $this->_from->getTable();
 	}
 	
+	public function getSchema() {
+		return $this->_from->getSchema();
+	}
+	
+	public function getMapping() {
+		return $this->_from;
+	}
+	
 	public function getJoins() {
 		return $this->_join;
+	}
+	
+	public function hasJoin($class) {
+		
 	}
 	
 	public function getWheres() {
@@ -161,6 +204,14 @@ class SimDAL_Query {
 	
 	public function getType() {
 		return $this->_type;
+	}
+	
+	public function count() {
+		if (method_exists($this->_parent, 'count')) {
+			return $this->_parent->count($this);
+		}
+		
+		return false;
 	}
 	
 	public function fetch($limit=null, $offset=null) {

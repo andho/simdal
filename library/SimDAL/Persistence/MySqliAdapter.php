@@ -121,8 +121,12 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $sql;
 	}
 	
-	protected function _returnResultRows($sql, $class) {
+	protected function _returnResultRows($sql, $class, $lockRows = false) {
 		$this->_connect();
+		
+		if ($lockRows) {
+			$sql .= ' FOR UPDATE';
+		}
 		
 		$query = mysqli_query($this->_conn, $sql, MYSQLI_STORE_RESULT);
 		
@@ -140,8 +144,12 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $this->_returnEntities($rows, $class);
 	}
 	
-	protected function _returnResultRow($sql, $class=null) {
+	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
 		$this->_connect();
+		
+		if ($lockRows) {
+			$sql .= ' FOR UPDATE';
+		}
 		
 		if (!($query = mysqli_query($this->_conn, $sql))) {
 			return null;
@@ -248,21 +256,29 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		}
 		$joins = $this->_processQueryJoins($query, $columns);
 		
+		$from = $query->getFrom();
+		$schema = $query->getSchema();
+		if (!is_null($schema) && !empty($schema)) {
+			$from = $query->getSchema() . '.' . $from;
+		}
+		
 		switch ($query->getType()) {
 			case SimDAL_Query::TYPE_SELECT:
 				$sql = 'SELECT ' . implode(', ', $columns) . ' ';
-				$sql .= 'FROM ' . $query->getFrom();
+				$sql .= 'FROM ' . $from;
+				$sql .= $joins;
 				break;
 			case SimDAL_Query::TYPE_DELETE:
 				$sql = 'DELETE ';
-				$sql .= 'FROM ' . $query->getFrom();
+				$sql .= 'FROM ' . $from;
+				$sql .= $joins;
 				break;
 			case SimDAL_Query::TYPE_UPDATE:
-				$sql = 'UPDATE ' . $query->getFrom();
+				$sql = 'UPDATE ' . $from;
+				$sql .= $joins;
 				$sets = $this->_processWhereSets($query);
 				$sql .= ' SET ' . implode(', ', $sets);
 		}
-		$sql .= $joins;
 		
 		if (count($wheres) > 0) {
 			$sql .= ' WHERE ' . implode(' AND ', $wheres);
@@ -277,16 +293,23 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	protected function _processQueryPrimaryTableColumns($query) {
 	    $columns = array();
 	    $columns_array = $query->getColumns();
-	    if ($query->hasAliases() || count($columns_array) > 0) {
+	    if (!$query->hasAliases() && count($columns_array) <= 0) {
 	        $columns_array = $query->getTableColumns();
 	    }
 	    if (count($columns_array) > 0) {
 	        /* @var $column SimDAL_Mapper_Column */
-	        foreach ($columns_array as $column) {
-		        $column_string = $column->getTable() . '.' . $column->getColumn();
-		        if ($column->hasAlias()) {
-		            $column_string .= ' AS ' . $column->getAlias();
-		        }
+	        foreach ($columns_array as $alias=>$column) {
+	        	if ($column instanceof SimDAL_Mapper_Column) {
+			        $column_string = $column->getTable() . '.' . $column->getColumn();
+			        if ($column->hasAlias()) {
+			            $column_string .= ' AS ' . $column->getAlias();
+			        }
+	        	} else {
+	        		$column_string = $column;
+	        		if (!is_numeric($alias) && $alias != '') {
+	        			$column_string .= ' AS ' . $alias;
+	        		}
+	        	}
 		        $columns[] = $column_string;
 	        }
 	    } else {
@@ -370,12 +393,15 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $left . $operator . $right;
 	}
 	
-	protected function _processWhereValue($value, $where) {
+	protected function _processWhereValue($value, SimDAL_Query_Where_Interface $where) {
 		if (is_object($value)) {
 			$class = get_class($value);
 			switch ($class) {
 				case 'SimDAL_Mapper_Column': return $this->_processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
+				case 'SimDAL_Query_Where_Value_Range': return $this->_processWhereRange($value); break;
 			}
+		} else if (is_array($value)) {
+			return $this->_processWhereArray($value);
 		} else {
 			return "'" . $value . "'";
 		}
@@ -386,12 +412,19 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $this->_quoteIdentifier($table) . '.' . $this->_quoteIdentifier($column);
 	}
 	
+	protected function _processWhereRange(SimDAL_Query_Where_Value_Range $range) {
+		$value1 = $this->_processWhereValue($range->getValue1());
+		$value2 = $this->_processWhereValue($range->getValue2());
+		
+		return $value1 . ' AND ' . $value2;
+	}
+	
+	protected function _processWhereArray(array $value) {
+		
+	}
+	
 	protected function _processWhereOperator($operator) {
-		switch ($operator) {
-			case 'LIKE': return ' LIKE '; break;
-			case '=':
-			default: return ' = '; break;
-		}
+		return $operator;
 	}
 	
 	protected function _processQueryLimit($limit, $offset, SimDAL_Query $query) {

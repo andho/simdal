@@ -259,8 +259,24 @@ class SimDAL_Mapper {
 	}
 	
 	public function getDomainEntityNameFromClass($class) {
+		if (!is_string($class) && !is_numeric($class)) {
+			return false;
+		}
 		while (!array_key_exists($class, $this->map) && $class !== false) {
 			$class = get_parent_class($class);
+		}
+		
+		return $class;
+	}
+	
+	public function getDescendentEntityClass($entity, $domain_entity_name) {
+		$class = get_class($entity);
+		$mapping = $this->getMappingForEntityClass($domain_entity_name);
+		/* @var $descendent SimDAL_Mapper_Descendent */
+		foreach ($mapping->getDescendents() as $descendent) {
+			if ($descendent->getFullClassName() == $class) {
+				return $descendent->getFullClassName();
+			}
 		}
 		
 		return $class;

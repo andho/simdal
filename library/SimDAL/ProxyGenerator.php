@@ -37,16 +37,36 @@ class SimDAL_ProxyGenerator {
 		$proxy_class = $class . 'Proxy';
 		
 		$class = self::_generateProxyClass($mapping);
-		$class .= self::_generateHelperProperties($mapping);
-		$class .= self::_generateHelperMethods($mapping);
-		$class .= self::_generateProxyMethods($mapping);
+		$helper_properties .= self::_generateHelperProperties($mapping);
+		$helper_methods .= self::_generateHelperMethods($mapping);
+		$proxy_methods .= self::_generateProxyMethods($mapping);
+		
+		$class .= $helper_properties;
+		$class .= $helper_methods;
+		$class .= $proxy_methods;
 		$class .= '}' . PHP_EOL . PHP_EOL;
+		
+		$descendents = $mapping->getDescendents();
+		$prefix = $mapping->getDescendentPrefix();
+		/* @var $descendents SimDAL_Mapper_Descendent */
+		foreach ($descendents as $descendent) {
+			if ($descendent->getType() === SimDAL_Mapper_Descendent::TYPE_NORMAL) {
+				$descendent_class = self::_generateProxyClass($mapping, $prefix . $descendent->getClass());
+				$descendent_class .= $helper_properties;
+				$descendent_class .= $helper_methods;
+				$descendent_class .= $proxy_methods;
+				$descendent_class .= '}' . PHP_EOL . PHP_EOL;
+				$class .= $descendent_class;
+			}
+		}
 		
 		return $class;
 	}
 	
-	static protected function _generateProxyClass(SimDAL_Mapper_Entity $mapping) {
-		$class = $mapping->getClass();
+	static protected function _generateProxyClass(SimDAL_Mapper_Entity $mapping, $class=null) {
+		if (is_null($class)) {
+			$class = $mapping->getClass();
+		}
 		$proxy_class = $class . 'SimDALProxy';
 		$class = 'class ' . $proxy_class . ' extends ' . $class . ' implements SimDAL_ProxyInterface {' . PHP_EOL . PHP_EOL;
 		
@@ -92,7 +112,7 @@ class SimDAL_ProxyGenerator {
 		
 		foreach ($mapping->getColumns() as $columnName=>$column) {
 			$output .= '			if (method_exists($data, \'get' . $columnName . '\')) {' . PHP_EOL;
-			$output .= '				$this->set' . $columnName . '($data->get' . $columnName . '());' . PHP_EOL;
+			$output .= '				$this->' . $columnName . ' = $data->get' . $columnName . '();' . PHP_EOL;
 			$output .= '			}' . PHP_EOL;
 		}
 		
@@ -128,6 +148,10 @@ class SimDAL_ProxyGenerator {
 		$output .= '	private function _getSession() {' . PHP_EOL;
 		$output .= '		return $this->_session;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
+		$output .= '	public function _SimDAL_setPrimaryKey($values) {' . PHP_EOL;
+		$primary_key = $mapping->getPrimaryKey();
+		$output .= '		$this->' . $primary_key . ' = $values;' . PHP_EOL;
+		$output .= '	}' . PHP_EOL;
 		
 		return $output;
 	}

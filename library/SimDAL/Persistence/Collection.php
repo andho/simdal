@@ -30,13 +30,22 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		$this->_association = $association;
 	}
 	
-	public function add(&$entity) {
+	public function add(&$entity, $load=true) {
+		/**
+		 * load current values, otherwise if load is called after
+		 * commiting this entity will be in the collection twice.
+		 * @todo find a way to load data when needed
+		 */
+		if ($load) {
+			$this->_loadAll();
+		} 
+		
 		$class = $this->_getAssociation()->getClass();
 		if (!$entity instanceof $class) {
 			throw new Exception('Object of invalid class has been passed');
 		}
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
-		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey) && !$this->_getSession()->isAdded($class, $entity->$primaryKey)) {
+		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey) && !$this->_getSession()->isAdded($entity)) {
 			$this->_getSession()->addEntity($entity);
 		}
 		$this[$entity->$primaryKey] = $entity;

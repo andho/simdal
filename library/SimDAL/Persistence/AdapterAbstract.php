@@ -424,9 +424,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		foreach ($rows as $row) {
 			$entity = $this->_returnEntity($row, $class);
-			$entityClass = $this->_getMapper()->getClassFromEntity($entity);
-			$pk = $this->_getMapper()->getPrimaryKey($entityClass);
-			$entities[$entity->$pk] = $entity;
+			if (!$entityClass) {
+				$entityClass = $this->_getMapper()->getClassFromEntity($entity);
+				$pk = $this->_getMapper()->getPrimaryKey($entityClass);
+				$pk_getter = 'get' . $pk;
+			}
+			$entities[$entity->$pk_getter()] = $entity;
 		}
 		
 		$collection = new SimDAL_Collection($entities);
@@ -437,8 +440,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _returnEntity($row, $class) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$entity = $this->_entityFromArray($row, $class);
-		if ($this->_getSession()->isLoaded($class, $entity->$pk)) {
-			return $this->_getSession()->getLoaded($class, $entity->$pk);
+		$pk_getter = 'get' . ucfirst($pk);
+		if ($this->_getSession()->isLoaded($class, $entity->$pk_getter())) {
+			return $this->_getSession()->getLoaded($class, $entity->$pk_getter());
 		}
 		
 		$this->_getSession()->updateEntity($entity);
@@ -634,13 +638,23 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $this->_returnResultRows($sql, $class);
 	}
 	
-	public function returnQueryResult(SimDAL_Query $query) {
+	public function returnQueryResult(SimDAL_Query $query, $lockRows=false) {
 		$sql = $this->_queryToString($query);
 		
 		if ($query->limit() == 1) {
-			return $this->_returnResultRow($sql, $query->getClass());
+			return $this->_returnResultRow($sql, $query->getClass(), $lockRows);
 		} else {
-			return $this->_returnResultRows($sql, $query->getClass());
+			return $this->_returnResultRows($sql, $query->getClass(), $lockRows);
+		}
+	}
+	
+	public function returnQueryResultAsArray(SimDAL_Query $query) {
+		$sql = $this->_queryToString($query);
+		
+		if ($query->limit() == 1) {
+			return $this->returnQueryAsRow($sql);
+		} else {
+			return $this->returnQueryAsRows($sql, $query->getClass());
 		}
 	}
 	
