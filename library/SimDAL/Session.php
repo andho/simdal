@@ -13,6 +13,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected $_deleted = array();
 	protected $_newKey = 1;
 	protected $_lockRows = false;
+	protected $_hooks = array();
+	protected $_hookSession;
 	
 	/**
 	 * @return SimDAL_Session_Factory
@@ -129,6 +131,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$classes = $this->_getUsedClasses();
 		$priority = $this->_getCommitPriority($classes);
 		
+		if ($this->_hasHooks()) {
+			$this->_startHookSession();
+		}
+		
 		$this->startTransaction();
 		
 		$error = false;
@@ -146,6 +152,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			if ($this->_hasUpdatesFor($class) && !$this->_commitUpdatesFor($class)) {
 				$error = true;
 				break;
+			}
+			
+			if (!$this->_commitHookSession()) {
+				throw new Exception("Unable to commit hook session");
 			}
 		}
 		} catch (Exception $e) {
@@ -346,6 +356,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			
 			$entity->_SimDAL_setPrimaryKey($id);
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
+			$this->_processInsertHooks($entity);
 			$this->update($entity);
 		}
 		
@@ -359,6 +370,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			if (!$this->getAdapter()->updateEntity($entity)) {
 				return false;
 			}
+			$this->_processUpdateHooks($entity);
 			$actual = clone($entity);
 			$this->_actual[$class][$entity->$primaryKey] = $entity;
 		}
@@ -435,6 +447,92 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	protected function _getCommitPriority($classes) {
 		return $this->getMapper()->getClassPriority($classes);
+	}
+	
+	protected function _hasHooks() {
+		if (count($this->_hooks['insert'])) {
+			return true;
+		}
+		if (count($this->_hooks['update'])) {
+			return true;
+		}
+		if (count($this->_hooks['delete'])) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	protected function _startHookSession() {
+		$this->_hookSession = SimDAL_Session::factory()->getNewSession();
+	}
+	
+	/**
+	 * @return SimDAL_Session
+	 */
+	protected function _getHookSession() {
+		return $this->_hookSession;
+	}
+	
+	protected function _commitHookSession() {
+		if ($this->_hookSession) {
+			return $this->_hookSession->commit();
+		}
+		
+		return true;
+	}
+	
+	protected function _processInsertHooks($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['insert'])) {
+			return;
+		}
+		
+		foreach ($this->_hooks['insert'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _processUpdateHooks($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['update'])) {
+			return;
+		}
+		
+		$row = $this->getChanges($entity);
+		foreach ($this->_hooks['update'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $row, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _processDeleteHooks($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['delete'])) {
+			return;
+		}
+		
+		foreach ($this->_hooks['delete'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _registerHook($class, $object, $method, $type, $data) {
+		$this->_hooks[$type][$class][] = array('object'=>$object, 'method'=>$method, 'data'=>$data);
+	}
+	
+	public function registerInsertHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'insert', $data);
+	}
+	
+	public function registerUpdateHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'update', $data);
+	}
+	
+	public function registerDeleteHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'delete', $data);
 	}
 	
 	public function getChanges($entity) {

@@ -40,20 +40,27 @@ class SimDAL_Session_Factory {
 	 */
 	public function getCurrentSession() {
 		if (is_null($this->_session)) {
-			$proxyFile = DOMAIN_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
-			if (!is_file($proxyFile)) {
-				throw new Exception('Proxy file not found');
-			} else if (!is_readable($proxyFile)) {
-				throw new Exception('Unable to load proxy file');
-			} else {
-				include $proxyFile;
-			}
-		
-			$adapter_class = $this->_db['class'];
-			$this->_session = new SimDAL_Session($this->_mapper, $adapter_class, $this->_db);
+			$this->_session = $this->getNewSession();
 		}
 		
 		return $this->_session;
+	}
+	
+	/**
+	 * @return SimDAL_Session
+	 */
+	public function getNewSession() {
+		$proxyFile = DOMAIN_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
+		if (!is_file($proxyFile)) {
+			throw new Exception('Proxy file not found');
+		} else if (!is_readable($proxyFile)) {
+			throw new Exception('Unable to load proxy file');
+		} else {
+			include_once $proxyFile;
+		}
+	
+		$adapter_class = $this->_db['class'];
+		return new SimDAL_Session($this->_mapper, $adapter_class, $this->_db);
 	}
 	
 	public function getMapper() {
