@@ -77,11 +77,10 @@ class SimDAL_ProxyGenerator {
 		$associations = $mapping->getAssociations();
 		$output = '';
 		
-		$output .= 'protected $_session;' . PHP_EOL;
+		$output .= 'private $_session;' . PHP_EOL;
 		
 		/* @var $association SimDAL_Mapper_Association */
 		if (count($associations)) {
-			$output = '';
 			$output .= '	private $_loadedSimDALEntities = array(' . PHP_EOL;
 			foreach ($associations as $association) {
 				$output .= '		\'' . $association->getMethod() . '\' => false,' . PHP_EOL;

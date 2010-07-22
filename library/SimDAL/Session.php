@@ -246,8 +246,9 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$associations = $mapping->getAssociations();
 		$primaryKey = $mapping->getPrimaryKey();
-		if (is_array($this->_modified[$class]) && array_key_exists($entity->$primaryKey, $this->_modified[$class])) {
-			return $this->_modified[$class][$entity->$primaryKey];
+		$pk_getter = 'get' . ucfirst($primaryKey);
+		if (is_array($this->_actual[$class]) && array_key_exists($entity->$pk_getter(), $this->_actual[$class])) {
+			return $this->_actual[$class][$entity->$pk_getter()];
 		}
 		
 		return null;
@@ -367,12 +368,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $mapping->getPrimaryKey();
 		foreach ($this->_modified[$class] as $key=>$entity) {
+			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
 			if (!$this->getAdapter()->updateEntity($entity)) {
 				return false;
 			}
-			$this->_processUpdateHooks($entity);
 			$actual = clone($entity);
-			$this->_actual[$class][$entity->$primaryKey] = $entity;
+			$pk_getter = 'get' . ucfirst($primaryKey);
+			$this->_actual[$class][$entity->$pk_getter()] = $entity;
 		}
 		
 		return true;
@@ -494,7 +496,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 	}
 	
-	protected function _processUpdateHooks($entity) {
+	protected function _processUpdateHooks($entity, $actual) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		if (!array_key_exists($class, $this->_hooks['update'])) {
 			return;
@@ -503,7 +505,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$row = $this->getChanges($entity);
 		foreach ($this->_hooks['update'][$class] as $hook) {
 			$method = $hook['method'];
-			$hook['object']->$method($entity, $row, $this->_getHookSession(), $hook['data']);
+			$hook['object']->$method($entity, $actual, $row, $this->_getHookSession(), $hook['data']);
 		}
 	}
 	
@@ -540,17 +542,19 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$class = $this->getMapper()->getClassFromEntity($entity);
 		$pk = $this->getMapper()->getPrimaryKey($class);
+		$getter = 'get' . ucfirst($pk);
 		
-		if (!is_object($this->_actual[$class][$entity->$pk])) {
+		if (!is_object($this->_actual[$class][$entity->$getter()])) {
 			return $data;
 		}
 		
-		foreach ($this->_actual[$class][$entity->$pk] as $key=>$value) {
-			if ($entity->$key == $value) {
+		foreach ($this->_actual[$class][$entity->$getter()] as $key=>$value) {
+			$key_getter = 'get' . ucfirst($key);
+			if ($entity->$key_getter() == $value) {
 				continue;
 			}
 			
-			$data[$key] = $entity->$key;
+			$data[$key] = $entity->$key_getter();
 		}
 		
 		return $data;
