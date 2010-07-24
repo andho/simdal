@@ -403,7 +403,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		} else if (is_array($value)) {
 			return $this->_processWhereArray($value);
 		} else {
-			return "'" . $value . "'";
+			return "'" . $this->escape($value) . "'";
 		}
 	}
 	

@@ -96,13 +96,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		$pk = $mapping->getPrimaryKey();
+		$getter = 'get' . ucfirst($pk);
 		
 		$row = $this->_getSession()->getChanges($entity);
 		if (count($row) <= 0) {
 			return true;
 		}
 		
-		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
+		$sql = $this->_processUpdateQuery($class, $row, $entity->$getter());
 		$result = $this->execute($sql);
 		if ($result === false) {
 			throw new Exception($this->getAdapterError());

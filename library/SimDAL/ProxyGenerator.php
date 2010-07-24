@@ -96,7 +96,10 @@ class SimDAL_ProxyGenerator {
 		$associations = $mapping->getAssociations();
 		
 		$output = '';
-		$output .= '	public function __construct($data, SimDAL_Session $session) {' . PHP_EOL;
+		$output .= '	public function __construct($data, SimDAL_Session $session, $id=null) {' . PHP_EOL;
+		$output .= '		if (!is_null($id)) {' . PHP_EOL;
+		$output .= '			$this->id = $id;' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
 		$output .= '		if (!is_array($data) && !is_object($data)) {' . PHP_EOL;
 		$output .= '			return false;' . PHP_EOL;
 		$output .= '		}' . PHP_EOL . PHP_EOL;
@@ -150,7 +153,22 @@ class SimDAL_ProxyGenerator {
 		$output .= '	public function _SimDAL_setPrimaryKey($values) {' . PHP_EOL;
 		$primary_key = $mapping->getPrimaryKey();
 		$output .= '		$this->' . $primary_key . ' = $values;' . PHP_EOL;
-		$output .= '	}' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		$output .= '	public function _SimDAL_diff($data) {' . PHP_EOL;
+		$output .= '		$output = array();' . PHP_EOL;
+		$output .= '		foreach ($this as $key=>$value) {' . PHP_EOL;
+		$output .= '			if ($key == \'id\') {' . PHP_EOL;
+		$output .= '				continue;' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '			$method = \'get\' . ucfirst($key);' . PHP_EOL;
+		$output .= '			if (method_exists($data, $method) && ((is_scalar($this->$key) || is_scalar($data->$method())) && (!is_null($this->$key) || !is_null($data->$method()))) && method_exists($data, $method)) {' . PHP_EOL;
+		$output .= '				if ($this->$key != $data->$method()) {' . PHP_EOL;
+		$output .= '					$output[$key] = $this->$key;' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		$output .= '		return $output;' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;
 	}

@@ -74,20 +74,32 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$domain_entity_name = $this->getMapper()->getClassFromEntity($entity);
 		$class = $this->getMapper()->getDescendentEntityClass($entity, $domain_entity_name);
+		$class = preg_replace('/SimDALProxy$/', '', $class);
 		/* @var $entityMapper SimDAL_Mapper_Entity */
 		$entityMapper = $this->getMapper()->getMappingForEntityClass($domain_entity_name);
-		
-		$proxyClass = $class . 'SimDALProxy';
-		$proxy = new $proxyClass($entity, $this);
-		$entity = $proxy;
-		
-		$table = $entityMapper->getTable();
 		
 		if (!array_key_exists($domain_entity_name, $this->_new) || !is_array($this->_new[$domain_entity_name])) {
 			$this->_new[$domain_entity_name] = array();
 		}
 		
+		if (in_array($entity, $this->_new[$domain_entity_name])) {
+			return false;
+		}
+		
+		$pkColumn = $entityMapper->getPrimaryKeyColumn();
+		$id = null;
+		if ($pkColumn->isAutoIncrement()) {
+			$pk = $pkColumn->getProperty();
+			$id = 'autoincrement' . $this->_newKey;
+		}
+		
+		$proxyClass = $class . 'SimDALProxy';
+		$proxy = new $proxyClass($entity, $this, $id);
+		$entity = $proxy;
+		
 		$this->_new[$domain_entity_name][] = $entity;
+		
+		$this->_newKey++;
 		
 		return true;
 	}
@@ -544,20 +556,9 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$pk = $this->getMapper()->getPrimaryKey($class);
 		$getter = 'get' . ucfirst($pk);
 		
-		if (!is_object($this->_actual[$class][$entity->$getter()])) {
-			return $data;
-		}
+		$actual = $this->getActualFromEntity($entity);
 		
-		foreach ($this->_actual[$class][$entity->$getter()] as $key=>$value) {
-			$key_getter = 'get' . ucfirst($key);
-			if ($entity->$key_getter() == $value) {
-				continue;
-			}
-			
-			$data[$key] = $entity->$key_getter();
-		}
-		
-		return $data;
+		return $entity->_SimDAL_diff($actual);
 	}
 	
 	/**
