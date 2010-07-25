@@ -553,12 +553,22 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$data = array();
 		
 		$class = $this->getMapper()->getClassFromEntity($entity);
-		$pk = $this->getMapper()->getPrimaryKey($class);
-		$getter = 'get' . ucfirst($pk);
-		
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$actual = $this->getActualFromEntity($entity);
 		
-		return $entity->_SimDAL_diff($actual);
+		$data = array();
+		/* @var $column SimDAL_Mapper_Column */
+		foreach ($mapping->getColumns() as $column) {
+			$property = $column->getProperty();
+			$method = ucfirst($property);
+			$getter = 'get' . $method;
+			$setter = 'set' . $method;
+			if ($entity->$getter() != $actual->$getter()) {
+				$data[$property] = $entity->$getter();
+			}
+		}
+		
+		return $data;
 	}
 	
 	/**
