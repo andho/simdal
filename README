@@ -1,4 +1,4 @@
-SimDAL stands for Simple Domain Abstraction Library.
+= SimDAL stands for Simple Domain Abstraction Library. =
 
 It is a PHP library which will help you create applications that only
 has to worry about the domain and leave the persistence of objects to
