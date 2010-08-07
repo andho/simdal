@@ -21,6 +21,10 @@ class SimDAL_Query_Where_Id implements SimDAL_Query_Where_Interface {
 		return $this->_id;
 	}
 	
+	public function getOperator() {
+		return '=';
+	}
+	
 	public function getProcessMethod() {
 		return 'WhereId';
 	}

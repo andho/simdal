@@ -87,7 +87,7 @@ abstract class SimDAL_Repository {
 	
 	/**
 	 * 
-	 * @param int $id
+	 * @param integer $id
 	 * @return SimDAL_Entity
 	 */
 	public function findById($id) {

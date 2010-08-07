@@ -23,8 +23,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected $_updates = array();
 	protected $_deletes = array();
 	
-	protected $_errorMessages = array();
-	
 	static public function setDefaultMapper($mapper) {
 		if (!$mapper instanceof SimDAL_Mapper) {
 			return false;
@@ -72,8 +70,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$row = $this->_arrayForStorageFromEntity($entity, false, true);
 		$sql = $this->_processInsertQuery($class, $row);
 		if (($result = $this->execute($sql)) === false) {
-			$this->_setError($this->getAdapterError());
-			return false;
+			throw new Exception($this->getAdapterError());
 		}
 		
 		$id = $this->lastInsertId();
@@ -84,11 +81,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	public function insertEntity($entity) {
+		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$row = $this->_arrayForStorageFromEntity($entity, false, true);
 		$sql = $this->_processInsertQuery($class, $row);
 		if (($result = $this->execute($sql)) === false) {
-			$this->_setError($this->getAdapterError());
-			return false;
+			throw new Exception($this->getAdapterError());
 		}
 		$id = $this->lastInsertId();
 		
@@ -99,17 +96,17 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		$pk = $mapping->getPrimaryKey();
+		$getter = 'get' . ucfirst($pk);
 		
 		$row = $this->_getSession()->getChanges($entity);
 		if (count($row) <= 0) {
 			return true;
 		}
 		
-		$sql = $this->_processUpdateQuery($class, $data, $entity->$pk);
+		$sql = $this->_processUpdateQuery($class, $row, $entity->$getter());
 		$result = $this->execute($sql);
 		if ($result === false) {
-			$this->_errorMessages['dberror'] = $this->getAdapterError();
-			return false;
+			throw new Exception($this->getAdapterError());
 		}
 		
 		return true;
@@ -225,8 +222,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
 		$result = $this->execute($sql);
 		if ($result === false) {
-			$this->_errorMessages['dberror'] = $this->getError();
-			return false;
+			throw new Exception($this->getAdapterError());
 		}
 				
 		return true;
@@ -336,8 +332,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			$row = $this->_arrayForStorageFromEntity($entity, false, true);
 			$sql = $this->_processInsertQuery($class, $row);
 			if (($result = $this->execute($sql)) === false) {
-				$this->_setError($this->getAdapterError());
-				return false;
+				throw new Exception($this->getAdapterError());
 			}
 			$id = $this->lastInsertId();
 			$entity->id = $id;
@@ -359,8 +354,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				$sql = $this->_processUpdateQuery($class, $row, $id);
 				$result = $this->execute($sql);
 				if ($result === false) {
-					$this->_errorMessages['dberror'] = $this->getAdapterError();
-					return false;
+					throw new Exception($this->getAdapterError());
 				}
 				$this->_resolveEntityDependencies($entity);
 			}
@@ -379,8 +373,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$result = $this->execute($sql);
 		
 		if ($result === false) {
-			$this->_errorMessages['dberror'] = $this->getAdapterError();
-			return false;
+			throw new Exception($this->getAdapterError());
 		}
 		
 		return true;
@@ -429,16 +422,19 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 
 	protected function _returnEntities($rows, $class) {
-		$collection = new SimDAL_Collection();
+		$entities = array();
 		
 		foreach ($rows as $row) {
 			$entity = $this->_returnEntity($row, $class);
-			$entityClass = $this->_getMapper()->getClassFromEntity($entity);
-			$pk = $this->_getMapper()->getPrimaryKey($entityClass);
-			$collection[$entity->$pk] = $entity;
+			if (!$entityClass) {
+				$entityClass = $this->_getMapper()->getClassFromEntity($entity);
+				$pk = $this->_getMapper()->getPrimaryKey($entityClass);
+				$pk_getter = 'get' . $pk;
+			}
+			$entities[$entity->$pk_getter()] = $entity;
 		}
 		
-		$collection->setPopulated(true);
+		$collection = new SimDAL_Collection($entities);
 		
 		return $collection;
 	}
@@ -446,11 +442,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _returnEntity($row, $class) {
 		$pk = $this->_getMapper()->getPrimaryKey($class);
 		$entity = $this->_entityFromArray($row, $class);
-		if ($this->getUnitOfWork()->isLoaded($class, $entity->$pk)) {
-			return $this->getUnitOfWork()->getLoaded($class, $entity->id);
+		$pk_getter = 'get' . ucfirst($pk);
+		if ($this->_getSession()->isLoaded($class, $entity->$pk_getter())) {
+			return $this->_getSession()->getLoaded($class, $entity->$pk_getter());
 		}
 		
-		$this->getUnitOfWork()->updateCleanEntity($entity);
+		$this->_getSession()->updateEntity($entity);
 		return $entity;
 	}
 	
@@ -461,37 +458,44 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		    $entityClass = $mapping->getDescendentClass($row);
 		}
 		
-		$entity = new $entityClass();
+		$entityProxyClass = $entityClass . 'SimDALProxy';
+		$entity = new $entityProxyClass(array(), $this->_getSession());
 		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$curedDate = array();
 		foreach ($this->_getMapper()->getColumnData($class) as $property=>$column) {
-			if (!property_exists($entity, $property)) {
-				continue;
-			}
 			if (!array_key_exists($column[0], $row)) {
 				continue;
 			}
-			
-			$value = get_magic_quotes_runtime() ? stripslashes($row[$column[0]]) : $row[$column[0]];
-			
+			$value = $row[$column[0]];
+			$value = !is_null($value) && get_magic_quotes_runtime() ? stripslashes($value) : $value;
+			switch($column[1]) {
+				case 'binary':
+				case 'blob': $value = base64_decode($value); break;
+				case 'varchar':
+				case 'text':
+				case 'date':
+				case 'datetime': break;
+				case 'float': $value = (float)$value; break;
+				case 'int': $value = (int)$value; break;
+			}
 			if ($column[1] == 'binary' || $column[1] == 'binary') {
 				$value = base64_decode($value);
 			}
-			$entity->$property = $value;
+			$curedData[$property] = $value;
 		}
 		
 		if ($this->_getMapper()->hasDescendants($class)) {
 			$typeField = $this->_getMapper()->getDescendantTypeField($class);
 			$prefix = $this->_getMapper()->getDescendantClassPrefix($class);
 			foreach ($this->_getMapper()->getDescendantColumnData($class, $prefix.ucfirst($entity->$typeField)) as $property=>$column) {
-				if (!property_exists($entity, $property)) {
-					continue;
-				}
 				if (!array_key_exists($column[0], $row)) {
 					continue;
 				}
-				$entity->$property = $row[$column[0]];
+				$curedDate[$property] = $row[$column[0]];
 			}
 		}
+		
+		$entity = new $entityProxyClass($curedData, $this->_getSession());
 		
 		return $entity;
 	}
@@ -628,7 +632,27 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	public function returnQueryAsObjects($sql, $class) {
 		return $this->_returnResultRows($sql, $class);
 	}
+	
+	public function returnQueryResult(SimDAL_Query $query, $lockRows=false) {
+		$sql = $this->_queryToString($query);
 		
+		if ($query->limit() == 1) {
+			return $this->_returnResultRow($sql, $query->getClass(), $lockRows);
+		} else {
+			return $this->_returnResultRows($sql, $query->getClass(), $lockRows);
+		}
+	}
+	
+	public function returnQueryResultAsArray(SimDAL_Query $query) {
+		$sql = $this->_queryToString($query);
+		
+		if ($query->limit() == 1) {
+			return $this->returnQueryAsRow($sql);
+		} else {
+			return $this->returnQueryAsRows($sql, $query->getClass());
+		}
+	}
+	
 	protected function _transformData($key, $value, $class) {
 		if (is_null($value)) {
 			return "NULL";
@@ -659,7 +683,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			case 'binary':
 			case 'blob':
 				$output = "'".$this->escape($value, 'binary')."'";
-				error_log(base64_decode($output));
 				return $output;
 				break;
 			default: return $this->escape($value);
@@ -715,38 +738,22 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			if ($pk === $key) {
 				continue;
 			}
-			if (!$includeNull && is_null($entity->$key)) {
+			$method = 'get' . $key;
+			if (!method_exists($entity, $method)) {
 				continue;
 			}
+			if (!$includeNull && is_null($entity->$method())) {
+				continue;
+			}
+			
 			if ($transformData) {
-				$array[$value[0]] = $this->_transformData($key, $entity->$key, $class);
+				$array[$value[0]] = $this->_transformData($key, $entity->$method(), $class);
 			} else {
-				$array[$value[0]] = $entity->$key;
+				$array[$value[0]] = $entity->$method();
 			}
 		}
 		
 		return $array;
-	}
-	
-	protected function _setError($msg, $key=null) {
-		if (is_null($key)) {
-			$this->_errorMessages[] = $msg;
-			return;
-		}
-		
-		$this->_errorMessages[$key] = $msg;
-	}
-	
-	public function getErrorMessages() {
-		return $this->_errorMessages;
-	}
-	
-	public function getErrorMessage($key) {
-		if (!array_key_exists($key, $this->_errorMessages)) {
-			return false;
-		}
-		
-		return $this->_errorMessages[$key];
 	}
 	
 	abstract public function execute($sql);

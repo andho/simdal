@@ -10,6 +10,14 @@ class SimDAL_Mapper {
 	protected $_priority = array();
 	protected $_priority2 = array();
 	
+	public function __construct($map) {
+		$this->map = $map;
+	}
+	
+	public function getClasses() {
+		return array_keys($this->map);
+	}
+	
 	public function getTable($class) {
 		if (!array_key_exists($class, $this->map)) {
 			return false;
@@ -216,7 +224,8 @@ class SimDAL_Mapper {
 	 * @return SimDAL_Mapper_Entity
 	 */
 	public function getMappingForEntityClass($class) {
-	  return new SimDAL_Mapper_Entity($class, $this->map[$class]);
+		$class = $this->getDomainEntityNameFromClass($class);
+	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
 	}
 	
 	public function compare($class1, $class2) {
@@ -250,8 +259,24 @@ class SimDAL_Mapper {
 	}
 	
 	public function getDomainEntityNameFromClass($class) {
+		if (!is_string($class) && !is_numeric($class)) {
+			return false;
+		}
 		while (!array_key_exists($class, $this->map) && $class !== false) {
 			$class = get_parent_class($class);
+		}
+		
+		return $class;
+	}
+	
+	public function getDescendentEntityClass($entity, $domain_entity_name) {
+		$class = get_class($entity);
+		$mapping = $this->getMappingForEntityClass($domain_entity_name);
+		/* @var $descendent SimDAL_Mapper_Descendent */
+		foreach ($mapping->getDescendents() as $descendent) {
+			if ($descendent->getFullClassName() == $class) {
+				return $descendent->getFullClassName();
+			}
 		}
 		
 		return $class;

@@ -1,9 +1,8 @@
 <?php
 
-class SimDAL_Session {
+class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
-	static protected $_defaultAdapterClass;
-	static protected $_defaultMapper;
+	static protected $_factory;
 	
 	protected $_adapter;
 	protected $_mapper;
@@ -13,33 +12,25 @@ class SimDAL_Session {
 	protected $_actual = array();
 	protected $_deleted = array();
 	protected $_newKey = 1;
+	protected $_lockRows = false;
+	protected $_hooks = array();
+	protected $_hookSession;
 	
-	static public function setDefaultAdapter(SimDAL_Persistence_AdapterAbstract $adapter) {
-		self::$_defaultAdapter = $adapter;
+	/**
+	 * @return SimDAL_Session_Factory
+	 */
+	static public function factory($conf=null) {
+		if (is_null(self::$_factory)) {
+			if (is_null($conf)) {
+				throw new Exception("Need configuration when initializing Session Factory");
+			}
+			self::$_factory = new SimDAL_Session_Factory($conf);
+		}
+		
+		return self::$_factory;
 	}
 	
-	static public function setDefaultMapper(SimDAL_Mapper $mapper) {
-		self::$_defaultMapper = $mapper;
-	}
-	
-	public function __construct($mapper=null, $adapter_class=null) {
-		if (!is_null($adapter_class)) {
-			$this->_adapter = $adapter_class;
-		} else {
-			$this->_adapter = self::$_defaultAdapterClass;
-		}
-		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
-			throw new Exception("Supplied Adapter Class is not a valid class name");
-		}
-		
-		$class_parents = class_parents($this->_adapter);
-		if (!in_array('SimDAL_Persistence_AdapterAbstract')) {
-			throw new Exception("Supplied Adapter  is not a valid Adapter Class");
-		}
-		
-		$adapter_class = $this->_adapter;
-		$this->_adapter = new $adapter_class(null, $this);
-		
+	public function __construct($mapper, $adapter_class, $db_conf) {
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
 		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
@@ -47,50 +38,90 @@ class SimDAL_Session {
 		} else {
 			throw new SimDAL_MapperIsNotSetException();
 		}
+		
+		if (!is_null($adapter_class)) {
+			$this->_adapter = $adapter_class;
+		}
+		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
+			throw new Exception("Supplied Adapter Class is not a valid class name");
+		}
+		
+		$class_parents = class_parents($this->_adapter);
+		if (!in_array('SimDAL_Persistence_AdapterAbstract', $class_parents)) {
+			throw new Exception("Supplied Adapter is not a valid Adapter Class");
+		}
+		
+		$adapter_class = $this->_adapter;
+		
+		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
 	}
 	
-	public function add($entity) {
+	public function startTransaction() {
+		if ($this->_lockRows !== true) {
+			$this->getAdapter()->startTransaction();
+			$this->_lockRows = true;
+		}
+	}
+	
+	public function rollback() {
+		$this->_lockRows = false;
+	}
+	
+	public function addEntity(&$entity) {
 		if ($this->isLoaded($entity)) {
 			return false;
 		}
 		
-		$class = $this->_getClass($entity);
+		$domain_entity_name = $this->getMapper()->getClassFromEntity($entity);
+		$class = $this->getMapper()->getDescendentEntityClass($entity, $domain_entity_name);
+		$class = preg_replace('/SimDALProxy$/', '', $class);
 		/* @var $entityMapper SimDAL_Mapper_Entity */
-		$entityMapper = $this->getMapper()->getMappingForEntityClass($class);
+		$entityMapper = $this->getMapper()->getMappingForEntityClass($domain_entity_name);
 		
-		$table = $this->_mapper->getTable($class);
-		
-		if (!array_key_exists($class, $this->_new) || !is_array($this->_new[$class])) {
-			$this->_new[$class] = array();
+		if (!array_key_exists($domain_entity_name, $this->_new) || !is_array($this->_new[$domain_entity_name])) {
+			$this->_new[$domain_entity_name] = array();
 		}
 		
-		$pk = $entityMapper->getPrimaryKey();
-		$column = $entityMapper->getPrimaryKeyColumn();
-		if ($column->isAutoIncrement()) {
-			$entity->$pk = 'autoincrement'.$this->_newKey++;
+		if (in_array($entity, $this->_new[$domain_entity_name])) {
+			return false;
 		}
 		
-		$this->_new[$class][$entity->$pk] = $entity;
+		$pkColumn = $entityMapper->getPrimaryKeyColumn();
+		$id = null;
+		if ($pkColumn->isAutoIncrement()) {
+			$pk = $pkColumn->getProperty();
+			$id = 'autoincrement' . $this->_newKey;
+		}
+		
+		$proxyClass = $class . 'SimDALProxy';
+		$proxy = new $proxyClass($entity, $this, $id);
+		$entity = $proxy;
+		
+		$this->_new[$domain_entity_name][] = $entity;
+		
+		$this->_newKey++;
 		
 		return true;
 	}
 	
-	public function update($entity) {
-		$class = $this->_getClass($entity);
+	public function updateEntity($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
 		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $entityMapping->getPrimaryKey();
+		$pk_getter = 'get' . $primaryKey;
 		
 		if (!array_key_exists($class, $this->_modified)) {
 			$this->_modified[$class] = array();
 			$this->_actual[$class] = array();
 		}
 		
-		$this->_modified[$class][$entity->id] = $entity;
+		$this->_modified[$class][$entity->$pk_getter()] = $entity;
 		
 		$actual = clone($entity);
-		$this->_actual[$class][$entity->id] = $actual;
+		$this->_actual[$class][$entity->$pk_getter()] = $actual;
 	}
 	
-	public function delete($entity, $class=null, $column=null) {
+	public function deleteEntity($entity, $class=null, $column=null) {
 		if (is_object($entity)) {
 			$class = $this->_getClass($entity);
 			$table = $this->_mapper->getTable($class);
@@ -112,12 +143,16 @@ class SimDAL_Session {
 		$classes = $this->_getUsedClasses();
 		$priority = $this->_getCommitPriority($classes);
 		
-		$this->getAdapter()->startTransaction();
+		if ($this->_hasHooks()) {
+			$this->_startHookSession();
+		}
+		
+		$this->startTransaction();
 		
 		$error = false;
-		
+		try {
 		foreach ($priority as $class) {
-			if ($this->_hasDeletesForClass($class)) {
+			if ($this->_hasDeletesFor($class)) {
 				$error = true;
 			}
 			
@@ -130,15 +165,135 @@ class SimDAL_Session {
 				$error = true;
 				break;
 			}
+			
+			if (!$this->_commitHookSession()) {
+				throw new Exception("Unable to commit hook session");
+			}
+		}
+		} catch (Exception $e) {
+			$this->getAdapter()->rollbackTransaction();
+			throw $e;
 		}
 		
-		if (!$error) {
-			$this->getAdapter()->commit();
-		} else {
-			$this->getAdapter()->rollbackTransaction();
-		}
+		$this->getAdapter()->commit();
+		
+		$this->_lockRows = false;
+		
+		return true;
 	}
 
+	/**
+	 * 
+	 * @return SimDAL_Query
+	 */
+	public function load($class) {
+		$query = new SimDAL_Query($this);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
+	}
+	
+	public function count(SimDAL_Query $query) {
+		$query->from($query->getMapping(), array('count'=>'COUNT(*)'));
+		return $this->getAdapter()->returnQueryResultAsArray($query);
+	}
+	
+	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
+		if (is_null($offset)) {
+			$offset = 0;
+		}
+		if (is_null($limit)) {
+			$query->limit(1);
+		} else {
+			$query->limit($limit, $offset);
+		}
+		
+		return $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
+	}
+	
+	public function isAdded($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_new)) {
+			return false;
+		}
+		return in_array($entity, $this->_new[$class]);
+	}
+	
+	public function isLoaded($class, $id=null) {
+		if (is_object($class)) {
+			$entity = $class;
+			$class = $this->getMapper()->getClassFromEntity($class);
+			
+			$pk = $this->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
+			$getter = 'get' . ucfirst($pk);
+			$id = $entity->$getter();
+		}
+		
+		if (!array_key_exists($class, $this->_modified)) {
+			return false;
+		}
+		return array_key_exists($id, $this->_modified[$class]);
+	}
+	
+	public function getLoaded($class=null, $id=null) {
+		if (!is_null($class) && !array_key_exists($class, $this->_modified) && !array_key_exists($class, $this->_new)) {
+			return null;
+		}
+		if (!is_null($id)) {
+			if (is_array($this->_modified[$class]) && array_key_exists($id, $this->_modified[$class])) {
+				return $this->_modified[$class][$id];
+			} else if (is_array($this->_new[$class]) && array_key_exists($id, $this->_new[$class])) {
+				return $this->_new[$class][$id];
+			}
+			return null;
+		}
+		if (is_null($id)) {
+			return $this->_modified[$class];
+		}
+		return $this->_modified;
+	}
+	
+	public function getActualFromEntity($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$associations = $mapping->getAssociations();
+		$primaryKey = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($primaryKey);
+		if (is_array($this->_actual[$class]) && array_key_exists($entity->$pk_getter(), $this->_actual[$class])) {
+			return $this->_actual[$class][$entity->$pk_getter()];
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * @return SimDAL_Query
+	 */
+	public function update($class) {
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_UPDATE);
+		$query->limit(0);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
+	}
+	
+	/**
+	 * 
+	 * @param string $class
+	 * @return SimDAL_Query
+	 */
+	public function delete($class) {
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_DELETE);
+		$query->limit(0);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$query->from($mapping);
+		return $query;
+	}
+	
+	public function execute(SimDAL_Query $query) {
+		return $this->getAdapter()->executeQueryObject($query);
+	}
+	
 	protected function _resolveDependencies() {
 		foreach ($this->_new as $class=>$entities) {
 			foreach ($entities as $entity) {
@@ -153,36 +308,50 @@ class SimDAL_Session {
 		$associations = $mapping->getAssociations();
 		$primaryKey = $mapping->getPrimaryKeyColumn();
 		
+		$actual = $this->getActualFromEntity($entity);
+		
 		if (!is_array($associations) || count($associations) <= 0) {
 			return;
 		}
 		
-		$processed = array();
-		
 		/* @var $association SimDAL_Mapper_Association */
 		foreach ($associations as $association) {
+			$method = $association->getMethod();
+			
 			$parentKey = $association->getParentKey();
 			$foreignKey = $association->getForeignKey();
+			
+			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
+			$otherside_method = $matching_assoc->getMethod();
+			$otherside_setter = 'set' . $otherside_method;
+			$otherside_getter = 'get' . $otherside_method;
+			
 			switch ($association->getType()) {
 				case 'one-to-one':
-					$method = $assocation->getMethod();
-					$getter = 'get ' . $method;
-					$dependent = $this->$getter();
-				case 'one-to-many':
-					$method = $association->getMethod();
-					$getter = 'get' . $method;
-					$dependents = $entity->$getter();
-					$dependent_mapping = $this->getMapper()->getMappingForEntityClass($association->getClass());
-					$dependent_associations_all = $dependent_mapping->getAssociations();
-					foreach ($dependent_associations_all as $dependent_association) {
-						if ($class == $dependent_association->getClass() && $foreignKey == $dependent_association->getForeignKey()) {
-							break;
+				case 'many-to-one':
+					if ($association->isDependent()) {
+						$getter = 'get' . $method;
+						$dependent = $entity->$getter(false);
+						if (!is_null($dependent)) {
+							$entity->$foreignKey = $dependent->$parentKey;
+							$dependent->$otherside_getter()->add($entity, false);
 						}
 					}
-					foreach ($dependents as $dependent) {
-						$method = $dependent_association->getMethod();
-						$dependent->$method($entity);
+					break;
+				case 'one-to-many':
+					if ($entity->$parentKey !== $actual->$parentKey) {
+						continue;
 					}
+					
+					$getter = 'get' . $method;
+					$dependents = $entity->$getter();
+					foreach ($dependents->toArray() as $dependent) {
+						$dependent->$otherside_setter($entity);
+						$dependent->$foreignKey = $entity->$parentKey;
+					}
+					
+					$this->update($association->getClass())->set($foreignKey, $entity->$parentKey)->whereColumn($foreignKey)->equals($entity->$parentKey)->execute();
+					
 					break;
 			}
 		}
@@ -191,24 +360,36 @@ class SimDAL_Session {
 	protected function _commitInsertsFor($class) {
 		foreach ($this->_new[$class] as $key=>$entity) {
 			$id = $this->getAdapter()->insertEntity($entity);
+			if ($id === false) {
+				return false;
+			}
 			$class = $this->getMapper()->getClassFromEntity($entity);
 			$mapping = $this->getMapper()->getMappingForEntityClass($class);
 			$pk = $mapping->getPrimaryKey();
 			
-			$entity->$pk = $id;
+			$entity->_SimDAL_setPrimaryKey($id);
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
-			$this->getUnitOfWork()->update($entity);
+			$this->_processInsertHooks($entity);
+			$this->update($entity);
 		}
+		
+		return true;
 	}
 	
 	protected function _commitUpdatesFor($class) {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $mapping->getPrimaryKey();
 		foreach ($this->_modified[$class] as $key=>$entity) {
-			$this->getAdapter()->updateEntity($entity);
+			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
+			if (!$this->getAdapter()->updateEntity($entity)) {
+				return false;
+			}
 			$actual = clone($entity);
-			$this->_actual[$class][$entity->$primaryKey] = $entity;
+			$pk_getter = 'get' . ucfirst($primaryKey);
+			$this->_actual[$class][$entity->$pk_getter()] = $entity;
 		}
+		
+		return true;
 	}
 	
 	protected function _distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity) {
@@ -236,7 +417,7 @@ class SimDAL_Session {
 					$method = $association->getParentM();
 					$getter = 'set' . $method;
 					$setter = 'get' . $method;
-					$dependent = $entity->$getter();
+					$dependent = $entity->$getter(false);
 					if (!is_null($dependent)) {
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
@@ -245,7 +426,7 @@ class SimDAL_Session {
 					$method = $association->getMethod();
 					$getter = 'get' . $method;
 					$dependents = $entity->$getter();
-					foreach ($dependents as $dependent) {
+					foreach ($dependents->toArray(false) as $dependent) {
 						$dependent->$foreignKey = $entity->$parentKey;
 					}
 					break;
@@ -253,7 +434,7 @@ class SimDAL_Session {
 		}
 	}
 	
-	protected function _hasDeletesForClass($class) {
+	protected function _hasDeletesFor($class) {
 		if (!array_key_exists($class, $this->_deleted) || !is_array($this->_deleted[$class]) || count($this->_deleted[$class]) <= 0) {
 			return false;
 		}
@@ -261,33 +442,130 @@ class SimDAL_Session {
 		return true;
 	}
 	
-	protected function getUsedClasses() {
+	protected function _hasInsertsFor($class) {
+		return array_key_exists($class, $this->_new);
+	}
+	
+	protected function _hasUpdatesFor($class) {
+		return array_key_exists($class, $this->_modified);
+	}
+	
+	protected function _getUsedClasses() {
 		$classes = array_keys($this->_new);
 		$classes = array_merge($classes, array_keys($this->_modified));
-		$classes = array_merge($classes, array_keys($this->_deleted['entities']));
+		if (isset($this->_deleted['entities']) && is_array($this->_deleted['entities'])) {
+			$classes = array_merge($classes, array_keys($this->_deleted['entities']));
+		}
 		return array_unique($classes);
 	}
 	
-	protected function getCommitPriority($classes) {
+	protected function _getCommitPriority($classes) {
 		return $this->getMapper()->getClassPriority($classes);
+	}
+	
+	protected function _hasHooks() {
+		if (count($this->_hooks['insert'])) {
+			return true;
+		}
+		if (count($this->_hooks['update'])) {
+			return true;
+		}
+		if (count($this->_hooks['delete'])) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	protected function _startHookSession() {
+		$this->_hookSession = SimDAL_Session::factory()->getNewSession();
+	}
+	
+	/**
+	 * @return SimDAL_Session
+	 */
+	protected function _getHookSession() {
+		return $this->_hookSession;
+	}
+	
+	protected function _commitHookSession() {
+		if ($this->_hookSession) {
+			return $this->_hookSession->commit();
+		}
+		
+		return true;
+	}
+	
+	protected function _processInsertHooks($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['insert'])) {
+			return;
+		}
+		
+		foreach ($this->_hooks['insert'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _processUpdateHooks($entity, $actual) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['update'])) {
+			return;
+		}
+		
+		$row = $this->getChanges($entity);
+		foreach ($this->_hooks['update'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $actual, $row, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _processDeleteHooks($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		if (!array_key_exists($class, $this->_hooks['delete'])) {
+			return;
+		}
+		
+		foreach ($this->_hooks['delete'][$class] as $hook) {
+			$method = $hook['method'];
+			$hook['object']->$method($entity, $this->_getHookSession(), $hook['data']);
+		}
+	}
+	
+	protected function _registerHook($class, $object, $method, $type, $data) {
+		$this->_hooks[$type][$class][] = array('object'=>$object, 'method'=>$method, 'data'=>$data);
+	}
+	
+	public function registerInsertHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'insert', $data);
+	}
+	
+	public function registerUpdateHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'update', $data);
+	}
+	
+	public function registerDeleteHook($class, $object, $method, $data=array()) {
+		$this->_registerHook($class, $object, $method, 'delete', $data);
 	}
 	
 	public function getChanges($entity) {
 		$data = array();
 		
 		$class = $this->getMapper()->getClassFromEntity($entity);
-		$pk = $this->getMapper()->getPrimaryKey($class);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$actual = $this->getActualFromEntity($entity);
 		
-		if (!is_object($this->_actual[$class][$entity->$pk])) {
-			return $data;
-		}
-		
-		foreach ($this->_actual[$class][$entity->$pk] as $key=>$value) {
-			if ($entity->$key == $value) {
-				continue;
+		$data = array();
+		/* @var $column SimDAL_Mapper_Column */
+		foreach ($mapping->getColumns() as $column) {
+			$property = $column->getProperty();
+			$method = ucfirst($property);
+			$getter = 'get' . $method;
+			$setter = 'set' . $method;
+			if ($entity->$getter() != $actual->$getter()) {
+				$data[$property] = $entity->$getter();
 			}
-			
-			$data[$key] = $entity->$key;
 		}
 		
 		return $data;

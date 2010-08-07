@@ -6,6 +6,7 @@ class SimDAL_Persistence_Query {
 
 	protected $_from = null;
 	protected $_columns = null;
+	protected $_sets = null;
 	protected $_joins = null;
 	protected $_conditions = null;
 	protected $_having = null;
@@ -89,7 +90,7 @@ class SimDAL_Persistence_Query {
 
 		return $this;
 	}
-
+	
 	public function join ($table, $conditions, $columns='*') {
 		$this->_joins[] = new SimDAL_Persistence_Query_Join($table, $conditions);
 		if (is_array($columns)) {

@@ -2,6 +2,7 @@
 
 class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 
+	protected $_schema;
 	protected $_table;
 	protected $_class;
 	protected $_schema;
@@ -14,6 +15,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	protected $_descendents = array();
 	protected $_descendentTypeField;
 	protected $_descendentClassNamePrefix;
+	protected $_mapper;
 	
 	protected $_pointer = 0;
 	protected $_keymap = array();
@@ -70,8 +72,9 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return count($this->_columns);
 	}
 	
-	public function __construct($class, $map) {
+	public function __construct($class, $map, SimDAL_Mapper $mapper) {
 		$this->_class = $class;
+		$this->_schema = isset($map['schema']) ? $map['schema'] : '';
 		$this->_table = $map['table'];
 		if (isset($map['schema'])) {
 			$this->_schema = $map['schema'];
@@ -85,11 +88,16 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 			$this->_descendents = $map['descendents'];
 		}
 		$this->_descendentTypeField = isset($map['descendentTypeField']) ? $map['descendentTypeField'] : '';
-		$this->_descendentClassNamePrefix = isset($map['descendentClassNamePrefix']) ? $map['descendentClassNamePrefix'] : '';
+		$this->_descendentClassNamePrefix = isset($map['descendentClassNamePrefix']) ? $map['descendentClassNamePrefix'] : $this->getClass() . '_';
+		$this->_mapper = $mapper;
 		
 		$this->_setupColumns();
 		$this->_setupAssociations();
 		$this->_setupDescendents();
+	}
+	
+	public function getSchema() {
+		return $this->_schema;
 	}
 	
 	public function getTable() {
@@ -169,20 +177,37 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	    return $this->_descendentClassNamePrefix;
 	}
 	
-	protected function _setupColumns() {
+	protected function _setupColumns($descendent=true) {
+		if (!is_array($this->_columnsRawData)) {
+			if (!$descendent) {
+				throw new Exception("No column data given for Entity Mapping");
+			} else {
+				return;
+			}
+		}
 		foreach ($this->_columnsRawData as $property=>$column_data) {
 			$this->_columns[$property] = new SimDAL_Mapper_Column($this, $property, $column_data);
-			if ($column_data[2]['pk'] === true) {
-				$this->_primaryKey = $property;
-			}
-			if (isset($column_data[2]['alias']) && !$this->hasAliases()) {
-			    $this->_hasAliases = true;
+			if (array_key_exists(2, $column_data)) {
+				if (array_key_exists('pk', $column_data[2]) && $column_data[2]['pk'] === true) {
+					$this->_primaryKey = $property;
+				}
+				if (array_key_exists('alias', $column_data[2]) && !$this->hasAliases()) {
+				    $this->_hasAliases = true;
+				}
 			}
 		}
 	}
 	
+	/**
+	 * @return SimDAL_Mapper
+	 */
+	public function getMapper() {
+		return $this->_mapper;
+	}
+	
 	protected function _setupAssociations() {
 		$associations = $this->_associations;
+		$this->_associations = array();
 		foreach ($associations as $association_data) {
 			$association = new SimDAL_Mapper_Association($this, $association_data);
 			$this->_associations[$association->getIdentifier()] = $association;
@@ -191,6 +216,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	protected function _setupDescendents() {
 	  $descendents = $this->_descendents;
+	  $this->_descendents = array();
 	  foreach ($descendents as $class=>$descendent_data) {
 	    $descendent = new SimDAL_Mapper_Descendent($this, $class, $descendent_data);
 	    $this->_descendents[$descendent->getIdentifier()] = $descendent;
