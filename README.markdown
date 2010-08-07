@@ -11,14 +11,14 @@ Setup:
 path.
 
 2. put these in your index.php or bootstrap file
-	define('DOMAIN_PATH', '<path/to/domain/classes>');
-	require_once 'SimDAL/Autoload.php';
-	spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
-	SimDAL_Sesssion:factory(include('<path/to/config/file>');
+		define('DOMAIN_PATH', '<path/to/domain/classes>');
+		require_once 'SimDAL/Autoload.php';
+		spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
+		SimDAL_Sesssion:factory(include('<path/to/config/file>');
 
 3. create the generate proxy file on the path with the following:
-	$mapper = SimDAL_Session::factory()->getMapper();
-	SimDAL_ProxyGenerator::generateProxies($mapper, '<path/to/cachedir>');
+		$mapper = SimDAL_Session::factory()->getMapper();
+		SimDAL_ProxyGenerator::generateProxies($mapper, '<path/to/cachedir>');
 4. create the configuration file as per the template config provided in
 config.example.php
 
