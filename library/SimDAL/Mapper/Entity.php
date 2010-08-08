@@ -5,7 +5,6 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	protected $_schema;
 	protected $_table;
 	protected $_class;
-	protected $_schema;
 	protected $_columns = array();
 	protected $_columnsRawData = array();
 	protected $_hasAliases = false;
@@ -102,10 +101,6 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	public function getTable() {
 		return $this->_table;
-	}
-	
-	public function getSchema() {
-		return $this->_schema;
 	}
 	
 	public function getClass() {

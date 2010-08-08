@@ -1,39 +1,30 @@
 <?php
-
-$config = array(
-	'entities'=>array(
-		'Project'=>array(
-			'name'=>'Project',
-			'properties'=>array(
-				'id',
-				'name',
-				'description',
-				'type'
+return array(
+	'db' => array(
+		'host' => '192.168.123.13',
+		'username' => 'root',
+		'password' => 'allied',
+		'database' => 'alliedhealth',
+		'class' => 'SimDAL_Persistence_MySqliAdapter'
+	),
+	'map' => array(
+		'Project' => array(
+			'columns' => array(
+				'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
+				'name' => array('name', 'varchar'),
+				'typeId' => array('type_id', 'int')
 			),
-			'relations'=>array(
-				'parents'=>array(
-					'type'=>array(
-						'entity'=>'Type',
-						'type'=>'one-to-many',
-						'foreignKey'=>'type'
-					)
-				)
+			'associations' => array(
+				array('many-to-one', 'Type', array('fk'=>'typeId'))
 			)
 		),
-		'Type'=>array(
-			'name'=>'Type',
-			'properties'=>array(
-				'id',
-				'type'
+		'Type' => array(
+			'columns' => array(
+				'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
+				'name' => array('name', 'varchar')
 			),
-			'relations'=>array(
-				'dependents'=>array(
-					'parent'=>array(
-						'entity'=>'Parent',
-						'type'=>'many-to-one',
-						'foreignKey'=>'type'
-					)
-				)
+			'associations' => array(
+				array('one-to-many', 'Project', array('fk'=>'typeId'))
 			)
 		)
 	)

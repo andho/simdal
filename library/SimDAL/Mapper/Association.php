@@ -27,7 +27,7 @@ class SimDAL_Mapper_Association {
 	}
 	
 	public function getMethod() {
-		return $this->_method;
+		return ucfirst($this->_method);
 	}
 	
 	public function getProperty() {

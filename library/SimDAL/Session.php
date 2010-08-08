@@ -42,6 +42,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		if (!is_null($adapter_class)) {
 			$this->_adapter = $adapter_class;
 		}
+		if ($adapter_class instanceof SimDAL_Persistence_AdapterAbstract) {
+			$this->_adapter = $adapter_class;
+			return;
+		}
 		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
 			throw new Exception("Supplied Adapter Class is not a valid class name");
 		}
@@ -296,6 +300,11 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	protected function _resolveDependencies() {
 		foreach ($this->_new as $class=>$entities) {
+			foreach ($entities as $entity) {
+				$this->_resolveEntityDependencies($entity);
+			}
+		}
+		foreach ($this->_modified as $class=>$entities) {
 			foreach ($entities as $entity) {
 				$this->_resolveEntityDependencies($entity);
 			}

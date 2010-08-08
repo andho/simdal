@@ -1,28 +1,40 @@
 <?php
 
-//require_once ('library/SimDAL/Entity.php');
-//require_once ('library/SimDAL/Entity/NoEntityManagerException.php');
+class Project {
+	
+	protected $id;
+	protected $name;
+	protected $typeId;
+	
+	protected $type;
+	
+	public function getName() {
+		return $this->name;
+	}
 
-class TestDomain_Project {
-	
-	public $id;
-	public $name;
-	public $description;
-	public $typeId;
-	
-	private $type = null;
-	
-	public function getTestDomain_Type() {
-		if (is_null($this->type)) {
-			$trepo = new TestDomain_TypeRepository();
-			$this->type = $trepo->findById($this->typeId);
-		}
+	public function setName($name) {
+		$this->name = $name;
+	}
+
+	public function getTypeId() {
+		return $this->typeId;
+	}
+
+	public function setTypeId($typeId) {
+		$this->typeId = $typeId;
+	}
+
+	public function getType() {
 		return $this->type;
 	}
-	
-	public function setTestDomain_Type(TestDomain_Type $type) {
-		$this->typeId = $type->id;
+
+	public function setType(Type $type=null) {
 		$this->type = $type;
 	}
+
+	public function getId() {
+		return $this->id;
+	}
+
 	
 }
