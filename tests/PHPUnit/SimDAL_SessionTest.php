@@ -1,8 +1,6 @@
 <?php
 
-require_once 'tests/PHPUnit/SimDAL_Unit_TestCase.php';
-
-require_once 'library/SimDAL/Session.php';
+require_once 'SimDAL_Unit_TestCase.php';
 
 /**
  * SimDAL_Session test case.

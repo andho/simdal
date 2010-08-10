@@ -1,14 +1,12 @@
 <?php
 return array(
 	'db' => array(
-		'host' => '192.168.123.13',
-		'username' => 'root',
-		'password' => 'allied',
-		'database' => 'alliedhealth',
-		'class' => 'SimDAL_Persistence_MySqliAdapter'
+		'filename' => '/home/likewise-open/ALLIEDINSURE/amjad/git/simdal/tests/testdb.db',
+		'class' => 'SimDAL_Persistence_SqLiteAdapter'
 	),
 	'map' => array(
 		'Project' => array(
+			'table' => 'projects',
 			'columns' => array(
 				'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
 				'name' => array('name', 'varchar'),
@@ -19,6 +17,7 @@ return array(
 			)
 		),
 		'Type' => array(
+			'table' => 'types',
 			'columns' => array(
 				'id' => array('id', 'int', array('pk'=>true, 'autoIncrement'=>true)),
 				'name' => array('name', 'varchar')

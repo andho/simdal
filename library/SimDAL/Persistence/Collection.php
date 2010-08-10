@@ -34,7 +34,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		/**
 		 * load current values, otherwise if load is called after
 		 * commiting this entity will be in the collection twice.
-		 * @todo find a way to load data when needed
+		 * @todo find a way to load data when needed and not when adding an Entity
 		 */
 		if ($load) {
 			$this->_loadAll();

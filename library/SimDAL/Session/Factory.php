@@ -19,19 +19,6 @@ class SimDAL_Session_Factory {
 	}
 	
 	protected function _setupDatabaseSettings($db) {
-		if (!isset($db['host'])) {
-			throw new Exception("Database configuation doesn't specify database host");
-		}
-		if (!isset($db['username'])) {
-			throw new Exception("Database configuation doesn't specify database username");
-		}
-		if (!isset($db['password'])) {
-			throw new Exception("Database configuation doesn't specify database password");
-		}
-		if (!isset($db['database'])) {
-			throw new Exception("Database configuation doesn't specify database database");
-		}
-		
 		$this->_db = $db;
 	}
 	
