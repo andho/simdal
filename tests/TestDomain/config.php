@@ -1,8 +1,8 @@
 <?php
 return array(
 	'db' => array(
-		'filename' => '/home/likewise-open/ALLIEDINSURE/amjad/git/simdal/tests/testdb.db',
-		'class' => 'SimDAL_Persistence_SqLiteAdapter'
+		'filename' => '/home/likewise-open/ALLIEDINSURE/amjad/git/simdal/tests/test.db',
+		'class' => 'SimDAL_Persistence_SqLite3Adapter'
 	),
 	'map' => array(
 		'Project' => array(
