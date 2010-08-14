@@ -77,7 +77,7 @@ class SimDAL_ProxyGenerator {
 		$associations = $mapping->getAssociations();
 		$output = '';
 		
-		$output .= 'private $_session;' . PHP_EOL;
+		$output .= '	private $_session;' . PHP_EOL;
 		
 		/* @var $association SimDAL_Mapper_Association */
 		if (count($associations)) {
@@ -126,7 +126,10 @@ class SimDAL_ProxyGenerator {
 			$getter = 'get' . $method;
 			$output .= '			if (method_exists($data, \'' . $getter . '\')) {' . PHP_EOL;
 			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
-				$output .= '				$this->' . $setter . '($data->' . $getter . '());' . PHP_EOL;
+				$output .= '				$value = $data->' . $getter . '();' . PHP_EOL;
+				$output .= '				if (!is_null($value)) {' . PHP_EOL;
+				$output .= '					$this->' . $setter . '($data->' . $getter . '());' . PHP_EOL;
+				$output .= '				} else $this->' . $setter . '();' . PHP_EOL;
 			} else if ($association->getType() == 'one-to-many') {
 				$output .= '				$this->' . $property . ' = $data->' . $getter . '();' . PHP_EOL;
 			}
@@ -237,6 +240,11 @@ class SimDAL_ProxyGenerator {
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
+		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
+		$output .= '		$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . ');' . PHP_EOL;
+		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
 		return $output;
 	}
 	
@@ -258,6 +266,11 @@ class SimDAL_ProxyGenerator {
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
+		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
+		$output .= '		$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . ');' . PHP_EOL;
+		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;

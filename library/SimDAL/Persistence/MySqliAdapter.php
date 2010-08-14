@@ -10,6 +10,19 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	private $_transaction = true;
 	
 	public function __construct($mapper, $session, $conf) {
+		if (!isset($db['host'])) {
+			throw new Exception("Database configuation doesn't specify database host");
+		}
+		if (!isset($db['username'])) {
+			throw new Exception("Database configuation doesn't specify database username");
+		}
+		if (!isset($db['password'])) {
+			throw new Exception("Database configuation doesn't specify database password");
+		}
+		if (!isset($db['database'])) {
+			throw new Exception("Database configuation doesn't specify database database");
+		}
+		
 		parent::__construct($mapper, $session);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
