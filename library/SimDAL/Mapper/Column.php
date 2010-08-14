@@ -54,6 +54,10 @@ class SimDAL_Mapper_Column {
 	    return $this->_alias;
 	}
 	
+	public function getDataType() {
+		return $this->_dataType;
+	}
+	
 	public function isPrimaryKey() {
 		return $this->_primaryKey;
 	}

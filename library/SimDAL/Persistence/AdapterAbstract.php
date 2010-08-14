@@ -64,7 +64,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _getSession() {
 		return $this->_session;
 	}
-	
+	/*
 	public function _insert($entity) {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$row = $this->_arrayForStorageFromEntity($entity, false, true);
@@ -79,11 +79,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		return true;
 	}
-	
+	*/
 	public function insertEntity($entity) {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
-		$row = $this->_arrayForStorageFromEntity($entity, false, true);
-		$sql = $this->_processInsertQuery($class, $row);
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		
+		$row = $this->_arrayForStorageFromEntity($mapping, $entity, false, true);
+		$sql = $this->_processInsertQuery($mapping, $row);
 		if (($result = $this->execute($sql)) === false) {
 			throw new Exception($this->getAdapterError());
 		}
@@ -91,7 +93,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		if ($mapping->hasDescendents()) {
-			
+			$descendent = $mapping->getDescendentMappingFromEntity($entity);
+			if (!is_null($descendent)) {
+				$row = $this->_arrayForStorageFromEntity($descendent, $entity, false, true);
+				$sql = $this->_processInsertQuery($descendent, $row);
+				if (($result = $this->execute($sql)) === false) {
+					throw new Exception($this->getAdapterError());
+				}
+			}
 		}
 		
 		return $id;
@@ -117,104 +126,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return true;
 	}
 	
-	public function getAll($class) {
-		$this->_connect();
-		
-		$sql = $this->_processGetAllQuery($class);
-		
-		return $this->_returnResultRows($sql, $class);
-	}
-	
-	public function findById($class, $id) {
-		$entity = $this->getUnitOfWork()->getLoaded($class, $id);
-		if (!is_null($entity)) {
-			return $entity;
-		}
-		
-		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
-		
-		$query = new SimDAL_Query();
-		$query->from($mapping);
-		$query->whereIdIs($id);
-		
-		foreach ($mapping->getDescendents() as $descendent) {
-			$query->join($descendent);
-		}
-		
-		$query = $this->_queryToString($query);
-		
-		return $this->_returnResultRow($query, $class);
-	}
-
-	public function findByColumn($class, $value, $column, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$property = $this->_getMapper()->getColumn($class, $column);
-		$this->_connect();
-		
-		if (is_string($value)) {
-			$value = "'" . $this->escape($value) . "'";
-		}
-		
-		$sql = $this->_processFindByColumnQuery($table, $property[0], $value, $limit);
-		
-		if ($limit == 1) {
-			return $this->_returnResultRow($sql, $class);
-		}
-		
-		return $this->_returnResultRows($sql, $class);
-	}
-	
-	public function findBy($class, array $keyValuePairs, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$this->_connect();
-		
-		if (count($keyValuePairs) == 0) {
-			return false;
-		}
-		
-		$where = array();
-		foreach ($keyValuePairs as $key=>$value) {
-			$column = $this->_getMapper()->getColumn($class, $key);
-			//$where[] = "`{$column[0]}` = '$value'";
-			if (is_null($value)) {
-				$where[] = $this->_quoteIdentifier($column[0]) . " IS NULL";
-			} else {
-				$where[] = $this->_quoteIdentifier($column[0]) . " = " . $this->_transformData($key, $value, $class);
-			}
-		}
-		
-		$sql = $this->_processFindByQuery($table, $where, $limit);
-		
-		if ($limit == 1) {
-			return $this->_returnResultRow($sql, $class);
-		}
-		
-		return $this->_returnResultRows($sql, $class);
-	}
-	
-	public function findByEither($class, array $keyValuePairs, $limit=1) {
-		$table = $this->_getMapper()->getTable($class);
-		$this->_connect();
-		
-		if (count($keyValuePairs) == 0) {
-			return false;
-		}
-		
-		$where = array();
-		foreach ($keyValuePairs as $key=>$value) {
-			$column = $this->_getMapper()->getColumn($class, $key);
-			$where[] = "`{$column[0]}` = '$value'";
-		}
-		
-		if (!is_null($limit)) {
-			$limit = " LIMIT $limit";
-		}
-		
-		$sql = $this->_processFindByEither($table, $where, $limit);
-		
-		return $this->_returnResultRows($sql, $class);
-	}
-	
 	public function _update($entity) {
 		$row = $this->getUnitOfWork()->getChanges($entity);
 		if (count($row) <= 0) {
@@ -233,77 +144,23 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return true;
 	}
 	
-	protected function _processMultipleDeleteQueries($class, $keys) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$table = $this->_getMapper()->getTable($class);
+	protected function _processUpdateQuery(SimDAL_Mapper_Entity $mapping, $data, $id) {
+		$pk = $mapping->getPrimaryKey();
 		
-		foreach ($keys as $key=>$value) {
-			if (is_numeric($key)) {
-				if (!isset($where['byid'])) $where['byid'] = array();
-				$where['byid'][] = $value;
-			} else {
-				$where[$key] = $value;
-			}
-		}
+		$sql = "UPDATE ".$this->_quoteIdentifier($mapping->getTable())." SET ";
 		
-		$wherecolumns = array();
-		if (isset($where['byid'])) {
-			$column = $this->_getMapper()->getColumn($class, $pk);
-			$whereid = $this->_whereRange($column[0], $where['byid']);
-			$wherecolumns['byid'] = $whereid;
-		}
-		
-		foreach ($where as $key=>$value) {
-			if ($key == 'byid') {
-				continue;
-			}
-			$column = $this->_getMapper()->getColumn($class, $key);
-			$wherecolumns[$key] = $this->_whereRange($column[0], $this->_transformRow($value, $class, $key));
-		}
-		
-		$where = implode(" OR ", $wherecolumns); 
-		
-		$sql = "DELETE FROM `$table` WHERE $where";
-		
-		return $sql;
-	}
-	
-	protected function _processUpdateQuery($class, $data, $id) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$pk = $this->_getMapper()->getColumn($class, $pk);
-		$pk = $pk[0];
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "UPDATE ".$this->_quoteIdentifier($table)." SET ";
-		
-		$columns = $this->_getMapper()->getColumnData($class);
+		$columns = $mapping->getColumns();
 		
 		foreach ($data as $key=>$value) {
-			$sql .= $this->_quoteIdentifier($columns[$key][0])." = ".$this->_transformData($key, $value, $class) . ",";
+			$sql .= $this->_quoteIdentifier($columns[$key]->getColumn())." = ".$this->_transformData($columns[$key]->getColumn(), $value, $mapping) . ",";
 		}
 		$sql = substr($sql,0,-1) . " WHERE `$pk`=$id";
 		
 		return $sql;
 	}
 	
-	protected function _processInsertQuery($class, $data) {
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
-		
-		return $sql;
-	}
-	
-	protected function _processMultipleInsertQueries($class, $data) {
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "INSERT INTO `$table` (`".implode('`,`',$this->_getMapper()->getColumnData($class))."`) VALUES ";
-		
-		foreach ($data as $row) {
-			$sql .= "(" . implode(',', $this->_transaformRow($row, $class)) . "),";
-		}
-		$sql = substr($sql,0,-1);
+	protected function _processInsertQuery(SimDAL_Mapper_Entity $mapping, $data) {
+		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
 		return $sql;
 	}
@@ -329,25 +186,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $this->getUnitOfWork()->delete($value, $class, $column);
 	}
 
-	public function insertMultiple($class, $data) {
-		if (!is_array($data) || count($data) <= 0) {
-			return true;
-		}
- 		foreach ($data as $entity) {
-			$row = $this->_arrayForStorageFromEntity($entity, false, true);
-			$sql = $this->_processInsertQuery($class, $row);
-			if (($result = $this->execute($sql)) === false) {
-				throw new Exception($this->getAdapterError());
-			}
-			$id = $this->lastInsertId();
-			$entity->id = $id;
-			$this->_resolveEntityDependencies($entity);
-			$this->getUnitOfWork()->updateCleanEntity($entity);
-		}
-		
-		return true;
-	}
-	
 	public function updateMultiple($class, $data) {
 		if (is_array($data) && count($data) > 0) {
 			foreach ($data as $id=>$entity) {
@@ -384,47 +222,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return true;
 	}
 	
-	public function commit() {
-		$this->_processEntities();
-		
-		$priority = $this->_getMapper()->getClassPriority();
-		
-		$this->startTransaction();
-		$commit = true;
-		
-		foreach ($priority as $class) {
-			if (array_key_exists($class, $this->_deletes) && !$this->deleteMultiple($class, $this->_deletes[$class])) {
-				$commit = false;
-				break;
-			}
-			$this->_deletes[$class] = array();
-			
-			if (array_key_exists($class, $this->_inserts) && !$this->insertMultiple($class, $this->_inserts[$class])) {
-				$commit = false;
-				break;
-			}
-			$this->_inserts[$class] = array();
-			
-			if (array_key_exists($class, $this->_updates) && !$this->updateMultiple($class, $this->_updates[$class])) {
-				$commit = false;
-				break;
-			}
-		}
-		
-		if ($commit) {
-			$this->commitTransaction();
-		} else {
-			$this->rollbackTransaction();
-		}
-		
-		$this->getUnitOfWork()->clearAll();
-		
-		$this->_inserts = array();
-		$this->_updates = array();
-		$this->_deletes = array();
-		
-		return $commit;
-	}
 
 	protected function _returnEntities($rows, $class) {
 		$entities = array();
@@ -658,14 +455,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 	}
 	
-	protected function _transformData($key, $value, $class) {
+	protected function _transformData(SimDAL_Mapper_Column $column, $value, SimDAL_Mapper_Entity $mapping) {
 		if (is_null($value)) {
 			return "NULL";
 		}
 		
-		$column = $this->_getMapper()->getColumn($class, $key);
-		
-		switch ($column[1]) {
+		switch ($column->getDataType()) {
 			case 'varchar':
 				return "'".$this->escape($value)."'";
 				break;
@@ -692,19 +487,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 				break;
 			default: return $this->escape($value);
 		}
-	}
-	
-	public function _transformRow($row, $class, $key=null) {
-		$data = array();
-		
-		foreach ($row as $column=>$value) {
-			if (!is_null($key)) {
-				$column = $key;
-			}
-			$data[] = $this->_transformData($key, $value, $class);
-		}
-		
-		return $data;
 	}
 	
 	/**
@@ -766,18 +548,16 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $array();
 	}
 	
-	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
+	protected function _arrayForStorageFromEntity(SimDAL_Mapper_Entity $mapping, $entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
-		$class = $this->_getMapper()->getClassFromEntity($entity);
-		
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-		
-		foreach($this->_mapper->getColumnData($class) as $key=>$value) {
-			if ($pk === $key) {
+		/* @var SimDAL_Mapper_Column */
+		foreach($mapping->getColumns() as $key=>$column) {
+			if ($column->isPrimaryKey()) {
 				continue;
 			}
-			$method = 'get' . $key;
+			
+			$method = 'get' . ucfirst($column->getProperty());
 			if (!method_exists($entity, $method)) {
 				continue;
 			}
@@ -786,9 +566,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			}
 			
 			if ($transformData) {
-				$array[$value[0]] = $this->_transformData($key, $entity->$method(), $class);
+				$array[$column->getColumn()] = $this->_transformData($column, $entity->$method(), $mapping);
 			} else {
-				$array[$value[0]] = $entity->$method();
+				$array[$column->getColumn()] = $entity->$method();
 			}
 		}
 		
