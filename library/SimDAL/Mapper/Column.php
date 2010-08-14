@@ -20,7 +20,7 @@ class SimDAL_Mapper_Column {
 		$this->_fieldName = $data[0];
 		$this->_dataType = $data[1];
 		if (isset($data[2]) && is_array($data[2])) {
-			$this->_primaryKey = isset($data[2]['pk']) ? $data[2]['pk'] : null;
+			$this->_primaryKey = isset($data[2]['pk']) ? $data[2]['pk'] : false;
 			$this->_autoIncrement = isset($data[2]['autoIncrement']) ? $data[2]['autoIncrement'] : false;
 			$this->_alias = isset($data[2]['alias']) ? $data[2]['alias'] : null;
 		}
@@ -52,6 +52,10 @@ class SimDAL_Mapper_Column {
 	
 	public function getAlias() {
 	    return $this->_alias;
+	}
+	
+	public function isPrimaryKey() {
+		return $this->_primaryKey;
 	}
 	
 	public function isAutoIncrement() {

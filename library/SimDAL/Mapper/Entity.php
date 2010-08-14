@@ -144,8 +144,31 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return $this->_associations;
 	}
 
+	public function hasDescendents() {
+		return count($this->_descendents) > 0;
+	}
+	
 	public function getDescendents() {
 		return $this->_descendents;
+	}
+	
+	/**
+	 * 
+	 * @param $entity
+	 * @return SimDAL_Mapper_Descendent
+	 */
+	public function getDescendentMappingFromEntity($entity) {
+		$class = get_class($entity);
+		$class = preg_match('/SimDALProxy$/', '', $class);
+		
+		/* @var $descendent SimDAL_Mapper_Descendent */
+		foreach ($this->getDescendents() as $descendent_class=>$descendent) {
+			if ($class == $descendent->getClass()) {
+				return $descendent;
+			}
+		}
+		
+		return null;
 	}
 	
 	public function getDescendentClass($row) {

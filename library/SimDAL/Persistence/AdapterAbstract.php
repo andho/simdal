@@ -89,6 +89,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		$id = $this->lastInsertId();
 		
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		if ($mapping->hasDescendents()) {
+			
+		}
+		
 		return $id;
 	}
 	
@@ -727,6 +732,40 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return true;
 	}
 
+	protected function _arrayForStorageFromEntityDescendent($entity, $includeNull = false, $transformData=false) {
+		$array = array();
+		
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		
+		/* @var $descendent_mapping SimDAL_Mapper_Descendent */
+		$descendent_mapping = $mapping->getDescendentMappingByEntity($entity);
+		
+		$pk = $descendent_mapping->getPrimaryKey();
+		
+		/* @var $column SimDAL_Mapper_Column */
+		foreach ($descendent_mapping->getColumns() as $column) {
+			if ($column->isPrimaryKey()) {
+				continue;
+			}
+			$method = 'get' . ucfirst($column->getColumn());
+			if (!method_exists($entity, $method)) {
+				continue;
+			}
+			if (!$includeNull && is_null($entity->$method())) {
+				continue;
+			}
+			
+			if ($transformData) {
+				$array[$column->getColumn()] = $this->_transformData($key, $entity->$method(), $class);
+			} else {
+				$array[$column->getColumn()] = $entity->$method();
+			}
+		}
+		
+		return $array();
+	}
+	
 	protected function _arrayForStorageFromEntity($entity, $includeNull = false, $transformData=false) {
 		$array = array();
 		
