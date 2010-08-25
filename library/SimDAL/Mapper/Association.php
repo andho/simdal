@@ -10,6 +10,7 @@ class SimDAL_Mapper_Association {
 	protected $_method;
 	protected $_parentMethod;
 	protected $_isParentAssociation;
+	protected $_dependentMethod;
 	
 	public function __construct(SimDAL_Mapper_Entity $entity, $data) {
 		$this->_entity = $entity;
@@ -19,6 +20,7 @@ class SimDAL_Mapper_Association {
 		$this->_parentKey = isset($data[2]['key']) ? $data[2]['key'] : $this->_entity->getPrimaryKey();
 		$this->_method = isset($data[2]['method']) ? $data[2]['method'] : $this->_getDefaultMethod();
 		$this->_parentMethod = isset($data[2]['parentMethod']) ? $data[2]['parentMethod'] : null;
+		$this->_dependentMethod = isset($data[2]['dependentMethod']) ? $data[2]['dependentMethod'] : null;
 		$this->_isParentAssociation = $this->_determineIfParentAssociation($data);
 	}
 	
@@ -30,6 +32,14 @@ class SimDAL_Mapper_Association {
 		return ucfirst($this->_method);
 	}
 	
+	public function getDependentMethod() {
+		if (is_null($this->_dependentMethod)) {
+			return null;
+		}
+		
+		return ucfirst($this->_dependentMethod);
+	}
+	
 	public function getProperty() {
 		$property = $this->getMethod();
 		$property = strtolower(substr($property, 0, 1)) . substr($property, 1);
@@ -38,7 +48,11 @@ class SimDAL_Mapper_Association {
 	}
 	
 	public function getParentMethod() {
-		return $this->_parentMethod;
+		if (is_null($this->_parentMethod)) {
+			return null;
+		}
+		
+		return ucfirst($this->_parentMethod);
 	}
 	
 	public function getType() {
@@ -73,12 +87,14 @@ class SimDAL_Mapper_Association {
 		$parentKey = $this->getParentKey();
 		
 		$othersidemapping = $this->getMapping()->getMapper()->getMappingForEntityClass($this->getClass());
+		$method = $this->getDependentMethod();
 		/* @var $otherside_association SimDAL_Mapper_Association */
 		foreach ($othersidemapping->getAssociations() as $otherside_association) {
-			if ($otherside_association->getClass() == $this->getMapping()->getClass()) {
+			if ( (is_null($method) && $otherside_association->getClass() == $this->getMapping()->getClass()) || $otherside_association->getMethod() == $method ) {
 				if ( ($this->getType() == 'one-to-many' && $otherside_association->getType() == 'many-to-one') ||
 					($this->getType() == 'many-to-one' && $otherside_association->getType() == 'one-to-many') ) {
-					if ($foreignKey == $otherside_association->getForeignKey() && $parentKey == $otherside_association->getParentKey()) {
+					$otherside_foreignKey = $otherside_association->getForeignKey();
+					if ($foreignKey == $otherside_foreignKey && $parentKey == $otherside_association->getParentKey()) {
 						return $otherside_association;
 					}
 				}

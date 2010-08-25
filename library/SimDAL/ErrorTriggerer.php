@@ -3,6 +3,7 @@
 class SimDAL_ErrorTriggerer {
 	
 	protected $_errorMessages = array();
+	protected $_message = array();
 
 	protected function _error($msg, $key=null) {
 		if (!is_null($key)) {
@@ -12,8 +13,20 @@ class SimDAL_ErrorTriggerer {
 		}
 	}
 	
+	protected function _message($msg, $key=null) {
+		if (!is_null($key)) {
+			$this->_messages[$key] = $msg;
+		} else {
+			$this->_messages[] = $msg;
+		}
+	}
+	
 	public function getErrorMessages() {
 		return $this->_errorMessages;
+	}
+	
+	public function getMessages() {
+		return $this->_messages;
 	}
 	
 	public function getErrorMessage($key) {
@@ -40,6 +53,10 @@ class SimDAL_ErrorTriggerer {
 	
 	public function clearErrors() {
 		$this->_errorMessages = array();
+	}
+	
+	public function hasMessages() {
+		return count($this->_messages) > 0;
 	}
 	
 }

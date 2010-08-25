@@ -297,6 +297,10 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			$sql .= ' WHERE ' . implode(' AND ', $wheres);
 		}
 		
+		if ($query->getOrderBy() !== null) {
+			$sql .= ' ' . $this->_processOrderBy($query->getOrderBy(), $query);
+		}
+		
 		$sql .= ' ' . $limit;
 		
 		return $sql;
@@ -449,6 +453,20 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			}
 			
 			$output = 'LIMIT ' . $output;
+		}
+		
+		return $output;
+	}
+	
+	protected function _processOrderBy(SimDAL_Query_OrderBy $order_by, SimDAL_Query $query) {
+		$output = ' ORDER BY ';
+		$column = $order_by->getValue();
+		$type = $order_by->getType();
+		
+		$output .= $this->_processWhereColumn($column->getTable(), $column->getColumn()) . ' ';
+		switch ($type) {
+			case 'descending': $output .= 'DESC'; break;
+			default: $output .= 'ASC'; break;
 		}
 		
 		return $output;

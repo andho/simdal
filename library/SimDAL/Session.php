@@ -331,6 +331,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$foreignKey = $association->getForeignKey();
 			
 			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
+			if (is_null($matching_assoc)) {
+				throw new Exception("Unable to find matching association in '{$association->getClass()}' Entity for '{$method}' association in '{$class}' Entity");
+			}
+			
 			$otherside_method = $matching_assoc->getMethod();
 			$otherside_setter = 'set' . $otherside_method;
 			$otherside_getter = 'get' . $otherside_method;
