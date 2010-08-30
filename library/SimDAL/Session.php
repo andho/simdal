@@ -191,7 +191,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function load($class) {
-		$query = new SimDAL_Query($this);
+		$query = new SimDAL_Query($this, $this->getMapper());
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
 		return $query;
@@ -274,7 +274,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function update($class) {
-		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_UPDATE);
+		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_UPDATE);
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
@@ -287,7 +287,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function delete($class) {
-		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_DELETE);
+		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_DELETE);
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);

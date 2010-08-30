@@ -225,6 +225,9 @@ class SimDAL_Mapper {
 	 */
 	public function getMappingForEntityClass($class) {
 		$class = $this->getDomainEntityNameFromClass($class);
+		if (!array_key_exists($class, $this->map)) {
+			throw new Exception("The entity class given is not valid");
+		}
 	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
 	}
 	

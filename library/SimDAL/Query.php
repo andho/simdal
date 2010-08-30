@@ -19,16 +19,25 @@ class SimDAL_Query {
 	protected $_type;
 	protected $_sets = array();
 	protected $_orderBy = null;
+	protected $_mapper;
 	
 	/**
 	 * 
 	 * @param SimDAL_Query_ParentInterface $parent A parent object of which the execute function will be called. Object must implement SimDAL_Query_ParentInterface
 	 * @param String $type Type of query to create. Options are 'select', 'update' and 'delete'
 	 */
-	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT) {
+	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT, SimDAL_Mapper $mapper) {
 		$this->_parent = $parent;
 		$this->_type = $type;
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
+		$this->_mapper = $mapper;
+	}
+	
+	/**
+	 * @return SimDAL_Mapper
+	 */
+	protected function _getMapper() {
+		return $this->_mapper;
 	}
 	
 	/**
@@ -38,6 +47,14 @@ class SimDAL_Query {
 	 * @return SimDAL_Query
 	 */
 	public function from(SimDAL_Mapper_Entity $entity, array $columns = array()) {
+		if (is_string($entity)) {
+			$entity = $this->_getMapper()->getMappingForEntityClass($entity);
+		} else if (!$entity instanceof SimDAL_Mapper_Entity) {
+			if (is_object($entity)) {
+				$type = get_class($entity);
+			}
+			throw new Exception("Argument 1 passed to SimDAL_Query::from should be an instance of SimDAL_Mapper_Entity or string, '" . $type . "' given");
+		}
 	    $this->_columns = $columns;
 		$this->_from = $entity;
 		
