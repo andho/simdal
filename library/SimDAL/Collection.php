@@ -78,6 +78,9 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	
 	public function __construct($data) {
 		foreach ($data as $key=>$value) {
+			if (in_array($value, $this->_data)) {
+				continue;
+			}
 			$this[$key] = $value;
 		}
 	}

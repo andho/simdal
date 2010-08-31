@@ -44,6 +44,13 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		if (!$entity instanceof $class) {
 			throw new Exception('Object of invalid class has been passed');
 		}
+		
+		$parentKey = $this->_getAssociation()->getParentKey();
+		$foreignKey = $this->_getAssociation()->getForeignKey();
+		$setter = 'set' . ucfirst($foreignKey);
+		$getter = 'get' . ucfirst($parentKey);
+		$entity->$setter($this->_parent->$getter());
+		
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
 		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey) && !$this->_getSession()->isAdded($entity)) {
 			$this->_getSession()->addEntity($entity);

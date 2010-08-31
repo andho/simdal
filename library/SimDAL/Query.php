@@ -168,13 +168,17 @@ class SimDAL_Query {
 	/**
 	 * 
 	 * @param string $column
-	 * @return SimDAL_Query
+	 * @return SimDAL_Query_OrderBy
 	 */
 	public function orderBy($column) {
 		$column = $this->_from->getColumn($column);
-		$this->_orderBy = new SimDAL_Query_OrderBy($column);
+		$this->_orderBy = new SimDAL_Query_OrderBy($column, $this);
 		
-		return $this;
+		return $this->_orderBy;
+	}
+	
+	public function getOrderBy() {
+		return $this->_orderBy;
 	}
 	
 	/**
