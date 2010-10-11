@@ -5,13 +5,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	static protected $_defaultMapper = null;
 	
 	/**
-	 * Unit of work
-	 *
-	 * @var SimDAL_UnitOfWork
-	 */
-	protected $_unitOfWork = null;
-	
-	/**
 	 * Mapper
 	 *
 	 * @var SimDAL_Mapper
@@ -43,19 +36,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		if ($session instanceof SimDAL_Session) {
 			$this->_session = $session;
 		}
-	}
-	
-	/**
-	 * Returns Unit of Work
-	 *
-	 * @return SimDAL_UnitOfWork
-	 */
-	public function getUnitOfWork() {
-		if (is_null($this->_unitOfWork)) {
-			$this->_unitOfWork = new SimDAL_UnitOfWork($this->_mapper);
-		}
-		
-		return $this->_unitOfWork;
 	}
 	
 	/**

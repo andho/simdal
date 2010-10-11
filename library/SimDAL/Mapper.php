@@ -19,7 +19,7 @@ class SimDAL_Mapper {
 	}
 	
 	public function getTable($class) {
-		if (!array_key_exists($class, $this->map)) {
+		if (!is_array($this->map) || (!is_numeric($class) && !is_string($class)) || !array_key_exists($class, $this->map)) {
 			return false;
 		}
 		
@@ -225,7 +225,7 @@ class SimDAL_Mapper {
 	 */
 	public function getMappingForEntityClass($class) {
 		$class = $this->getDomainEntityNameFromClass($class);
-		if (!array_key_exists($class, $this->map)) {
+		if (!is_array($this->map) || !array_key_exists($class, $this->map)) {
 			throw new Exception("The entity class given is not valid");
 		}
 	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);

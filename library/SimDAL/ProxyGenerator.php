@@ -226,23 +226,34 @@ class SimDAL_ProxyGenerator {
 		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
 		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
-		$output .= '			$this->' . $setter . '(' . PHP_EOL;
-		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
-		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
-		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
-		$output .= '				->fetch()' . PHP_EOL;
-		$output .= '			);' . PHP_EOL;
+		if ($association->isDependent ()) {
+			$output .= '                    $this->' . $setter . '(' . PHP_EOL;
+			$output .= '                            $session->load(\'' . $association->getClass () . '\')' . PHP_EOL;
+			$output .= '                            ->whereColumn(\'' . $association->getParentKey () . '\')' . PHP_EOL;
+			$output .= '                            ->equals($this->get' . ucfirst ( $association->getForeignKey () ) . '())' . PHP_EOL;
+			$output .= '                            ->fetch()' . PHP_EOL;
+			$output .= '                    );' . PHP_EOL;
+		} else if ($association->isParent ()) {
+			$output .= '                    $this->' . $setter . '(' . PHP_EOL;
+			$output .= '                            $session->load(\'' . $association->getClass () . '\')' . PHP_EOL;
+			$output .= '                            ->whereColumn(\'' . $association->getForeignKey () . '\')' . PHP_EOL;
+			$output .= '                            ->equals($this->get' . ucfirst ( $association->getParentKey () ) . '())' . PHP_EOL;
+			$output .= '                            ->fetch()' . PHP_EOL;
+			$output .= '                    );' . PHP_EOL;
+		}
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
-		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
-		$output .= '		if (!is_null($value)) {' . PHP_EOL;
-		$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
-		$output .= '		}' . PHP_EOL;
-		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
-		$output .= '	}' . PHP_EOL . PHP_EOL;
+		if ($association->isDependent()) {
+			$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
+			$output .= '		if (!is_null($value)) {' . PHP_EOL;
+			$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
+			$output .= '		}' . PHP_EOL;
+			$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
+			$output .= '	}' . PHP_EOL . PHP_EOL;
+		}
 		
 		return $output;
 	}
