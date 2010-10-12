@@ -10,7 +10,7 @@ $paths = array(
 	'libraries' => $libs
 );
 
-set_include_path(implode(PATH_SEPARATOR, $paths) . DIRECTORY_SEPARATOR . get_include_path());
+set_include_path(implode(PATH_SEPARATOR, $paths) . PATH_SEPARATOR . get_include_path());
 
 require_once 'SimDAL/Autoload.php';
 spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
