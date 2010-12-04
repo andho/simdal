@@ -11,8 +11,10 @@ class SimDAL_Mapper_Column {
 	protected $_dataType;
 	protected $_primaryKey;
 	protected $_autoIncrement;
+	protected $_entity;
 	
-	public function __construct(SimDAL_Mapper_Entity $entity, $property, $data, $class, $table, $property, $fieldname, $datatype, $primarykey=false, $autoincrement=false, $alias=null) {
+	public function __construct(SimDAL_Mapper_Entity $entity, $property, $data, $class=null, $table=null, $fieldname=null, $datatype=null, $primarykey=false, $autoincrement=false, $alias=null) {
+		$this->_entity = $entity;
 		$this->_class = $entity->getClass();
 		$this->_table = $entity->getTable();
 		$this->_schema = $this->getSchema();
@@ -24,6 +26,13 @@ class SimDAL_Mapper_Column {
 			$this->_autoIncrement = isset($data[2]['autoIncrement']) ? $data[2]['autoIncrement'] : false;
 			$this->_alias = isset($data[2]['alias']) ? $data[2]['alias'] : null;
 		}
+	}
+
+	/**
+	 * @return SimDAL_Mapper_Entity
+	 */
+	public function getEntity() {
+		return $this->_entity;
 	}
 	
 	public function getTable() {

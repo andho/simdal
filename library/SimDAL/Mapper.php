@@ -12,6 +12,12 @@ class SimDAL_Mapper {
 	
 	public function __construct($map) {
 		$this->map = $map;
+		
+		SimDAL_Autoload::registerMapper($this);
+	}
+	
+	public function addMappingForEntityClass($class, $mapping) {
+		$this->map[$class] = $mapping;
 	}
 	
 	public function getClasses() {

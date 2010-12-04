@@ -97,7 +97,22 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			return true;
 		}
 		
-		$sql = $this->_processUpdateQuery($class, $row, $entity->$getter());
+		$sql = $this->_processUpdateQuery($mapping, $row, $entity->$getter());
+		$result = $this->execute($sql);
+		if ($result === false) {
+			throw new Exception($this->getAdapterError());
+		}
+		
+		return true;
+	}
+	
+	public function deleteEntity($entity) {
+		$class = $this->_getMapper()->getClassFromEntity($entity);
+		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		$pk = $mapping->getPrimaryKey();
+		$getter = 'get' . ucfirst($pk);
+		
+		$sql = $this->_processDeleteQuery($mapping, $entity->$getter());
 		$result = $this->execute($sql);
 		if ($result === false) {
 			throw new Exception($this->getAdapterError());
@@ -132,7 +147,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$columns = $mapping->getColumns();
 		
 		foreach ($data as $key=>$value) {
-			$sql .= $this->_quoteIdentifier($columns[$key]->getColumn())." = ".$this->_transformData($columns[$key]->getColumn(), $value, $mapping) . ",";
+			$sql .= $this->_quoteIdentifier($columns[$key]->getColumn())." = ".$this->_transformData($columns[$key], $value, $mapping) . ",";
 		}
 		$sql = substr($sql,0,-1) . " WHERE `$pk`=$id";
 		
@@ -141,6 +156,13 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	protected function _processInsertQuery(SimDAL_Mapper_Entity $mapping, $data) {
 		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
+		
+		return $sql;
+	}
+	
+	protected function _processDeleteQuery(SimDAL_Mapper_Entity $mapping, $id) {
+		$pk = $mapping->getPrimaryKeyColumn();
+		$sql = "DELETE FROM ".$this->_quoteIdentifier($mapping->getTable())." WHERE `{$pk->getColumn()}`=".$id;
 		
 		return $sql;
 	}
@@ -441,6 +463,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		switch ($column->getDataType()) {
+			case 'text':
 			case 'varchar':
 				return "'".$this->escape($value)."'";
 				break;
@@ -533,7 +556,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		
 		/* @var SimDAL_Mapper_Column */
 		foreach($mapping->getColumns() as $key=>$column) {
-			if ($column->isPrimaryKey()) {
+			if ($column->isPrimaryKey() && $column->isAutoIncrement()) {
 				continue;
 			}
 			

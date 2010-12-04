@@ -125,23 +125,16 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$this->_actual[$class][$entity->$pk_getter()] = $actual;
 	}
 	
-	public function deleteEntity($entity, $class=null, $column=null) {
-		if (is_object($entity)) {
-			$class = $this->_getClass($entity);
-			$table = $this->_mapper->getTable($class);
-			
-			$this->_delete[$class][$entity->id] = $entity;
-		} else if (!is_null($column)) {
-			$this->_delete[$class][$column][] = $entity;
-		} else {
-			if (is_null($class)) {
-				return false;
-			}
-			$this->_delete[$class][$entity] = $entity;
-		}
+	public function deleteEntity($entity) {
+		$class = $this->_getClass($entity);
+		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $entityMapping->getPrimaryKey();
+		$pk_getter = 'get' . $primaryKey;
+		
+		$this->_delete[$class][$entity->$pk_getter()] = $entity;
 	}
 	
-	public function commit() {
+	public function commit($soft=false) {
 		$this->_resolveDependencies();
 		
 		$classes = $this->_getUsedClasses();
@@ -156,7 +149,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$error = false;
 		try {
 			foreach ($priority as $class) {
-				if ($this->_hasDeletesFor($class)) {
+				if ($this->_hasDeletesFor($class) && !$this->_commitDeletesFor($class)) {
 					$error = true;
 				}
 				
@@ -179,11 +172,16 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			throw $e;
 		}
 		
-		$this->getAdapter()->commitTransaction();
-		
-		$this->_lockRows = false;
+		if (!$soft) {
+			$this->getAdapter()->commitTransaction();
+			$this->_lockRows = false;
+		}
 		
 		return true;
+	}
+	
+	public function softCommit() {
+		return $this->commit(true);
 	}
 
 	/**
@@ -372,6 +370,22 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 	}
 	
+	protected function _commitDeletesFor($class) {
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($primaryKey);
+		foreach ($this->_deleted[$class] as $key=>$entity) {
+			if (!$this->getAdapter()->deleteEntity($entity)) {
+				return false;
+			}
+			$this->_processDeleteHooks($entity);
+			
+			unset($this->_deleted[$class][$entity->$pk_getter()]);
+		}
+		
+		return true;
+	}
+	
 	protected function _commitInsertsFor($class) {
 		foreach ($this->_new[$class] as $key=>$entity) {
 			$id = $this->getAdapter()->insertEntity($entity);
@@ -394,14 +408,14 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected function _commitUpdatesFor($class) {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($primaryKey);
 		foreach ($this->_modified[$class] as $key=>$entity) {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
 			if (!$this->getAdapter()->updateEntity($entity)) {
 				return false;
 			}
 			$actual = clone($entity);
-			$pk_getter = 'get' . ucfirst($primaryKey);
-			$this->_actual[$class][$entity->$pk_getter()] = $entity;
+			$this->_actual[$class][$entity->$pk_getter()] = $actual;
 		}
 		
 		return true;

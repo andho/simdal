@@ -17,7 +17,7 @@ class SimDAL_Mapper_Association {
 		$this->_type = $data[0];
 		$this->_class = $data[1];
 		$this->_foreignKey = $data[2]['fk'];
-		$this->_parentKey = isset($data[2]['key']) ? $data[2]['key'] : $this->_entity->getPrimaryKey();
+		$this->_parentKey = isset($data[2]['key']) ? $data[2]['key'] : 'delayed';
 		$this->_method = isset($data[2]['method']) ? $data[2]['method'] : $this->_getDefaultMethod();
 		$this->_parentMethod = isset($data[2]['parentMethod']) ? $data[2]['parentMethod'] : null;
 		$this->_dependentMethod = isset($data[2]['dependentMethod']) ? $data[2]['dependentMethod'] : null;
@@ -64,11 +64,22 @@ class SimDAL_Mapper_Association {
 	}
 	
 	public function getParentKey() {
+		if ($this->_parentKey == 'delayed') {
+			$association_entity = $this->getAssociationEntity ();
+			$this->_parentKey = $association_entity->getPrimaryKey ();
+		}
+		
 		return $this->_parentKey;
 	}
 	
 	public function getClass() {
 		return $this->_class;
+	}
+	
+	public function getAssociationEntity() {
+		$entity = $this->getMapping ()->getMapper ()->getMappingForEntityClass ( $this->getClass () );
+		
+		return $entity;
 	}
 	
 	public function isParent() {
@@ -97,6 +108,11 @@ class SimDAL_Mapper_Association {
 					if ($foreignKey == $otherside_foreignKey && $parentKey == $otherside_association->getParentKey()) {
 						return $otherside_association;
 					}
+				} else if ($this->getType() == 'one-to-one' && $otherside_association->getType() == 'one-to-one') {
+					$otherside_foreignKey = $otherside_association->getForeignKey();
+					if ($foreignKey == $otherside_foreignKey && $parentKey == $otherside_association->getParentKey()) {
+						return $otherside_association;
+					}
 				}
 			}
 		}
@@ -121,7 +137,7 @@ class SimDAL_Mapper_Association {
 	
 	protected function _determineIfParentAssociation($data) {
 		if ($data[0] === 'one-to-one') {
-			if (isset($data[2]) && isset($data[2]['parent']) && $data[2]['parent'] === true) {
+			if (isset($data[2]) && isset($data[2]['dependentMethod'])) {
 				return true;
 			}
 		}

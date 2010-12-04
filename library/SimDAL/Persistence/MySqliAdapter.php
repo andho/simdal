@@ -10,16 +10,16 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 	private $_transaction = true;
 	
 	public function __construct($mapper, $session, $conf) {
-		if (!isset($db['host'])) {
+		if (!isset($conf['host'])) {
 			throw new Exception("Database configuation doesn't specify database host");
 		}
-		if (!isset($db['username'])) {
+		if (!isset($conf['username'])) {
 			throw new Exception("Database configuation doesn't specify database username");
 		}
-		if (!isset($db['password'])) {
+		if (!isset($conf['password'])) {
 			throw new Exception("Database configuation doesn't specify database password");
 		}
-		if (!isset($db['database'])) {
+		if (!isset($conf['database'])) {
 			throw new Exception("Database configuation doesn't specify database database");
 		}
 		
@@ -126,8 +126,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 		return $rows;
 	}
 	
-	protected function _processInsertQuery($class, $data) {
-		$table = $this->_getMapper()->getTable($class);
+	protected function _processInsertQuery(SimDAL_Mapper_Entity $entity, $data) {
+		$table = $entity->getTable();
 		
 		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
@@ -378,7 +378,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			if ($value instanceof SimDAL_Mapper_Entity) {
 				$set .= $this->_processWhereColumn($value->getTable(), $value->getColumn());
 			} else {
-				$set .= $this->_transformData($column->getColumn(), $value, $column->getClass());
+				$set .= $this->_transformData($column, $value, $column->getEntity());
 			}
 			
 			$sets[] = $set;
@@ -419,6 +419,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_AdapterAbstrac
 			}
 		} else if (is_array($value)) {
 			return $this->_processWhereArray($value);
+		} else if (is_null($value)) {
+			return 'NULL';
 		} else {
 			return "'" . $this->escape($value) . "'";
 		}
