@@ -259,7 +259,7 @@ class SimDAL_Mapper {
 		if (!is_array($this->map) || !array_key_exists($class, $this->map)) {
 			throw new Exception("The entity class given is not valid");
 		}
-		if (!$this->_mappings[$class] instanceof SimDAL_Mapper_Entity) {
+		if (!isset($this->_mappings[$class]) || !$this->_mappings[$class] instanceof SimDAL_Mapper_Entity) {
 			$this->_mappings[$class] = new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
 		}
 		
