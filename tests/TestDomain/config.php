@@ -1,7 +1,7 @@
 <?php
 return array(
 	'db' => array(
-		'filename' => '/home/likewise-open/ALLIEDINSURE/amjad/Projects/own/simdal/tests/test.db',
+		'filename' => DOMAIN_PATH . DIRECTORY_SEPARATOR . 'test.db',
 		'class' => 'SimDAL_Persistence_PDO_SqLite3Adapter'
 	),
 	'map' => array(
