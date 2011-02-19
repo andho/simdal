@@ -27,18 +27,19 @@ class SimDAL_Mapper {
 	const COMPARE_LESS = 1;
 	
 	protected $map = array();
+	protected $_mappings = array();
 	
 	protected $_priority = array();
 	protected $_priority2 = array();
 	
-	public function __construct($map) {
-		$this->map = $map;
-		
+	public function __construct() {
 		SimDAL_Autoload::registerMapper($this);
 	}
 	
 	public function addMappingForEntityClass($class, $mapping) {
 		$this->map[$class] = $mapping;
+		
+		return $this->getMappingForEntityClass($class);
 	}
 	
 	public function getClasses() {
@@ -251,11 +252,18 @@ class SimDAL_Mapper {
 	 * @return SimDAL_Mapper_Entity
 	 */
 	public function getMappingForEntityClass($class) {
+		if (!class_exists($class, true)) {
+			throw new Exception('\'' . $class . '\' is not a valid Class');
+		}
 		$class = $this->getDomainEntityNameFromClass($class);
 		if (!is_array($this->map) || !array_key_exists($class, $this->map)) {
 			throw new Exception("The entity class given is not valid");
 		}
-	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
+		if (!$this->_mappings[$class] instanceof SimDAL_Mapper_Entity) {
+			$this->_mappings[$class] = new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
+		}
+		
+	    return $this->_mappings[$class];
 	}
 	
 	public function compare($class1, $class2) {

@@ -33,10 +33,7 @@ class SimDAL_Session_Factory {
 		}
 		$this->_setupDatabaseSettings($conf['db']);
 		
-		if (!isset($conf['map'])) {
-			throw new Exception("SimDAL configuration doesn't have mapper configuration");
-		}
-		$this->_mapper = new SimDAL_Mapper($conf['map']);
+		$this->_mapper = new SimDAL_Mapper();
 	}
 	
 	protected function _setupDatabaseSettings($db) {

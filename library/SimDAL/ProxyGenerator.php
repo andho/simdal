@@ -36,23 +36,16 @@ class SimDAL_ProxyGenerator {
 			throw new Exception('Could not create the proxy directory \'' . $proxy_dir . '\' for SimDAL');
 		}
 		
-		
 		$classes = $mapper->getClasses();
 		foreach ($classes as $class) {
-			$cachefile = $cachedir . DIRECTORY_SEPARATOR . 'proxies' . DIRECTORY_SEPARATOR . $class . '.inc';
-			if (!is_file($cachefile)) {
-				touch($cachefile);
-			}
-			$output = '<?php' . PHP_EOL . PHP_EOL;
-			$output .= self::_generateProxy($mapper->getMappingForEntityClass($class));
-			file_put_contents($cachefile, $output);
+			self::generateProxy($mapper->getMappingForEntityClass($class));
 		}
 		//echo '<pre>' . $output . '</pre>';
 		
 		//include $cachefile;
 	}
 	
-	static protected function _generateProxy(SimDAL_Mapper_Entity $mapping) {
+	static public function generateProxy(SimDAL_Mapper_Entity $mapping, $proxy_file) {
 		$class = $mapping->getClass();
 		
 		if (!class_exists($class)) {
@@ -84,6 +77,14 @@ class SimDAL_ProxyGenerator {
 				$class .= $descendent_class;
 			}
 		}
+		
+		
+		if (!is_file($proxy_file)) {
+			touch($proxy_file);
+		}
+		$output = '<?php' . PHP_EOL . PHP_EOL;
+		$output .= $class;
+		file_put_contents($proxy_file, $output);
 		
 		return $class;
 	}
