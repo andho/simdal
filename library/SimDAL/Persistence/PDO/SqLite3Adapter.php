@@ -37,7 +37,7 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	}
 	
 	public function __destruct() {
-		$this->_conn->close();
+		$this->_conn = null;
 	}
 	
 	protected function _connect() {
