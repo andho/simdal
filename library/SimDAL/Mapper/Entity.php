@@ -194,6 +194,12 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	
 	public function getDescendentClass($row) {
 	  $type_field = $this->_descendentTypeField;
+	  if (empty($type_field) || $type_field == '') {
+	  	return $this->getClass();
+	  }
+	  if (!isset($row[$type_field])) {
+	  	throw new Exception('\''.$type_field.'\' not defined in descendent');
+	  }
 	  $prefix = $this->getDescendentPrefix();
 	  $class = $prefix . ucfirst($row[$type_field]);
 	  
