@@ -55,9 +55,9 @@ class SimDAL_ProxyGenerator {
 		$proxy_class = $class . 'Proxy';
 		
 		$class = self::_generateProxyClass($mapping);
-		$helper_properties .= self::_generateHelperProperties($mapping);
-		$helper_methods .= self::_generateHelperMethods($mapping);
-		$proxy_methods .= self::_generateProxyMethods($mapping);
+		$helper_properties = self::_generateHelperProperties($mapping);
+		$helper_methods = self::_generateHelperMethods($mapping);
+		$proxy_methods = self::_generateProxyMethods($mapping);
 		
 		$class .= $helper_properties;
 		$class .= $helper_methods;
