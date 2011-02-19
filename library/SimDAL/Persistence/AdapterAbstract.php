@@ -283,6 +283,9 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		    $entityClass = $mapping->getDescendentClass($row);
 		}
 		
+		if (!class_exists($entityClass, true)) {
+			throw new Exception($entityClass . ' does not exist');
+		}
 		$entityProxyClass = $entityClass . 'SimDALProxy';
 		$entity = new $entityProxyClass(array(), $this->_getSession());
 		$class = $this->_getMapper()->getClassFromEntity($entity);

@@ -24,23 +24,25 @@
 class SimDAL_Persistence_SqLite3Adapter extends SimDAL_Persistence_AdapterAbstract {
 	
 	private $_filename;
+	private $_conn;
 	
 	public function __construct($mapper, $session, $conf) {
 		parent::__construct($mapper, $session);
-		$this->_filename = $conf['filename'];
+		$this->_filename = realpath($conf['filename']);
 	}
 	
 	public function __destruct() {
-		$this->_sqlite->close();
+		$this->_conn->close();
 	}
 	
 	protected function _connect() {
-		if (!is_null($this->_sqlite)) {
+		if (!is_null($this->_conn)) {
 			return;
 		}
 		
 		$error = '';
-		$this->_sqlite = new SQLite3($this->_filename);
+		$this->_conn = new PDO('sqlite:'.$this->_filename);
+		//$this->_conn = new SQLite3($this->_filename);
 		if (!$this->_conn) {
 			throw new Exception('Could not connect to SQLite database \'' . $this->_filename . '\': ' . $error);
 		}
@@ -122,10 +124,8 @@ class SimDAL_Persistence_SqLite3Adapter extends SimDAL_Persistence_AdapterAbstra
 		return $rows;
 	}
 	
-	protected function _processInsertQuery($class, $data) {
-		$table = $this->_getMapper()->getTable($class);
-		
-		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (".implode(',',array_keys($data)).") VALUES (".implode(',',$data).")";
+	protected function _processInsertQuery(SimDAL_Mapper_Entity $mapping, $data) {
+		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." (".implode(',',array_keys($data)).") VALUES (".implode(',',$data).")";
 		
 		return $sql;
 	}
@@ -150,7 +150,7 @@ class SimDAL_Persistence_SqLite3Adapter extends SimDAL_Persistence_AdapterAbstra
 	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
 		$this->_connect();
 		
-		$row = $this->_sqlite->querySingle($sql, true);
+		$row = $this->_conn->exec($sql);
 		if (!$row) {
 			return null;
 		}

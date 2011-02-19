@@ -26,24 +26,28 @@ class SimDAL_ProxyGenerator {
 	static public function generateProxies(SimDAL_Mapper $mapper, $cachedir) {
 		$cachedir = preg_replace('/[\/\\\\]$/', '', $cachedir);
 		if (!is_dir($cachedir)) {
-			if (!mkdir($cachedir, 0775, true)) {
-				echo "Could not create cache directory";
-				return false;
-			}
+			throw new Exception('.simdal directory doesn\'t exist in your Domain');
+		}
+		if (!is_dir($cachedir . DIRECTORY_SEPARATOR . 'config')) {
+			throw new Exception('.simdal/config directory doesn\'t exist in your Domain');
+		}
+		$proxy_dir = $cachedir . DIRECTORY_SEPARATOR . 'proxies';
+		if (!is_dir($proxy_dir) && !mkdir($proxy_dir, 0775, true)) {
+			throw new Exception('Could not create the proxy directory \'' . $proxy_dir . '\' for SimDAL');
 		}
 		
-		$cachefile = $cachedir . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
-		if (!is_file($cachefile)) {
-			touch($cachefile);
-		}
 		
 		$classes = $mapper->getClasses();
-		$output = '<?php' . PHP_EOL . PHP_EOL;
 		foreach ($classes as $class) {
+			$cachefile = $cachedir . DIRECTORY_SEPARATOR . 'proxies' . DIRECTORY_SEPARATOR . $class . '.inc';
+			if (!is_file($cachefile)) {
+				touch($cachefile);
+			}
+			$output = '<?php' . PHP_EOL . PHP_EOL;
 			$output .= self::_generateProxy($mapper->getMappingForEntityClass($class));
+			file_put_contents($cachefile, $output);
 		}
 		//echo '<pre>' . $output . '</pre>';
-		file_put_contents($cachefile, $output);
 		
 		//include $cachefile;
 	}

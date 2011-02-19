@@ -1,18 +1,23 @@
 <?php
+$domain_path = realpath(dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'TestDomain');
+define ( 'DOMAIN_PATH', $domain_path );
 
-define ( 'DOMAIN_PATH', dirname ( __FILE__ ) );
+if (!isset($paths)) {
+	$paths = array('curr_path' => get_include_path());
+	$autoload = true;
+}
 
-$dir = dirname ( realpath ( __FILE__ ) ) . DIRECTORY_SEPARATOR;
-$libs = $dir . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'library' . DIRECTORY_SEPARATOR;
+if (!isset($dir)) {
+	$paths['library'] = realpath(DOMAIN_PATH .DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'library');
+	$paths['domain'] = DOMAIN_PATH;
+	$paths = array_reverse($paths, true);
+	set_include_path(implode(PATH_SEPARATOR, $paths));
+}
 
-$paths = array(
-	'domain' => $dir,
-	'libraries' => $libs
-);
+if ($autoload) {
+	require_once 'SimDAL/Autoload.php';
+	SimDAL_Autoload::setDomainDirectory(DOMAIN_PATH);
+	spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
+}
 
-set_include_path(implode(PATH_SEPARATOR, $paths) . PATH_SEPARATOR . get_include_path());
-
-require_once 'SimDAL/Autoload.php';
-spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
-
-SimDAL_Session::factory(include'config.php');
+SimDAL_Session::factory(include 'config.php');

@@ -30,7 +30,7 @@ class SimDAL_SessionTest extends SimDAL_Unit_TestCase {
 		$this->assertType('SimDAL_Query', $query);
 	}
 	
-	public function testIfSessionReturnsAEntityWhenFetchIsCalledOnQuery() {
+	public function testIfSessionReturnsAnEntityWhenFetchIsCalledOnQuery() {
 		$project = $this->session->load('Project')->fetch();
 		
 		$this->assertType('Project', $project);

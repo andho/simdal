@@ -67,16 +67,16 @@ class SimDAL_Autoload {
         }
         
         if (preg_match('/^([^ _]*)?(_[^ _]*)*$/', $class, $matches)) {
-	        $class_file = str_replace('_', '/', $class) . '.php';
-        	if (is_file(self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file)) {
-	        	include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file;
-	        	include self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file;
+	        $class_file = str_replace('_', '/', $class);
+        	if (is_file(self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php')) {
+	        	include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php';
+	        	include self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
 	        	foreach (self::$_mappers as $mapper) {
-	        		$mapper->addMappingForEntityClass($class, include( self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file) );
+	        		$mapper->addMappingForEntityClass($class, include( self::getConfigDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php') );
 	        	} 
 	        	return true;
         	} else {
-        		include $class_file;
+        		include $class_file . '.php';
         		return true;
         	}
         }
