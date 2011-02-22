@@ -277,6 +277,7 @@ class SimDAL_ProxyGenerator {
 			$output .= '		if (!is_null($value)) {' . PHP_EOL;
 			$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
 			$output .= '		}' . PHP_EOL;
+			$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 			$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
 			$output .= '	}' . PHP_EOL . PHP_EOL;
 		}
@@ -308,6 +309,7 @@ class SimDAL_ProxyGenerator {
 		$output .= '		if (!is_null($value)) {' . PHP_EOL;
 		$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
+		$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
