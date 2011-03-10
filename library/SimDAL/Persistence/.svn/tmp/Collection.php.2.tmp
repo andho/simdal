@@ -61,12 +61,11 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			throw new Exception('Object of invalid class has been passed');
 		}
 		for ($i=0; $i<count($this->_keymap); $i++) {
-			if ($this->_data[$this->_keymap[$i]] === $entity) {
+			if ($this->_data[$this->_keymap[$i]]->id == $entity->id) {
 				unset($this->_data[$this->_keymap[$i]]);
 				unset($this->_keymap[$i]);
 				$foreignKey = $this->_getAssociation()->getForeignKey();
 				$entity->$foreignKey = null;
-				$this->_getSession()->deleteEntity($entity);
 			}
 		}
 		
@@ -148,6 +147,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			$this->_query = new SimDAL_Query($this);
 			$this->_query->from($this->_getSession()->getMapper()->getMappingForEntityClass($this->_getAssociation()->getClass()));
 			$parentKey = $this->_getAssociation()->getParentKey();
+<<<<<<< .mine
 			$parentKey_getter = 'get' . $parentKey;
 			$value = $this->_getParent()->$parentKey_getter();
 			if (is_null($value)) {
@@ -155,6 +155,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 				return false;
 			}
 			$this->_query->whereColumn($this->_getAssociation()->getForeignKey())->equals($value);
+=======
+			$parentKey_getter = 'get' . $parentKey;
+			$this->_query->whereColumn($this->_getAssociation()->getForeignKey())->equals($this->_getParent()->$parentKey_getter());
+>>>>>>> .r46
 		}
 		
 		return $this->_query;

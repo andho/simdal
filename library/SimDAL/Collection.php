@@ -4,8 +4,8 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	
 	// iterator implementation
 	private $_position = 0;
-	private $_data = array();
-	private $_keymap = array();
+	protected $_data = array();
+	protected $_keymap = array();
 	private $_searchHash = array();
 	private $_searchHashed = array();
 	public function rewind() {
@@ -78,6 +78,9 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	
 	public function __construct($data) {
 		foreach ($data as $key=>$value) {
+			if (in_array($value, $this->_data)) {
+				continue;
+			}
 			$this[$key] = $value;
 		}
 	}

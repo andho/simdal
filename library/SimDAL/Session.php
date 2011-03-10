@@ -15,6 +15,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected $_lockRows = false;
 	protected $_hooks = array();
 	protected $_hookSession;
+	protected $_mockQueries = array();
 	
 	/**
 	 * @return SimDAL_Session_Factory
@@ -65,6 +66,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	public function rollback() {
 		$this->_lockRows = false;
+		$this->getAdapter()->rollbackTransaction();
 	}
 	
 	public function addEntity(&$entity) {
@@ -82,7 +84,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$this->_new[$domain_entity_name] = array();
 		}
 		
-		if (in_array($entity, $this->_new[$domain_entity_name])) {
+		if (in_array($entity, $this->_new[$domain_entity_name], true)) {
 			return false;
 		}
 		
@@ -123,8 +125,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	public function deleteEntity($entity, $class=null, $column=null) {
 		if (is_object($entity)) {
-			$class = $this->_getClass($entity);
-			$table = $this->_mapper->getTable($class);
+			$class = $this->getMapper()->getClassFromEntity($entity);
+			$table = $this->getMapper()->getTable($class);
 			
 			$this->_delete[$class][$entity->id] = $entity;
 		} else if (!is_null($column)) {
@@ -137,7 +139,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 	}
 	
-	public function commit() {
+	public function commit($soft=false) {
 		$this->_resolveDependencies();
 		
 		$classes = $this->_getUsedClasses();
@@ -151,35 +153,40 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$error = false;
 		try {
-		foreach ($priority as $class) {
-			if ($this->_hasDeletesFor($class)) {
-				$error = true;
-			}
-			
-			if ($this->_hasInsertsFor($class) && !$this->_commitInsertsFor($class)) {
-				$error = true;
-				break;
-			}
-			
-			if ($this->_hasUpdatesFor($class) && !$this->_commitUpdatesFor($class)) {
-				$error = true;
-				break;
+			foreach ($priority as $class) {
+				if ($this->_hasDeletesFor($class)) {
+					$error = true;
+				}
+				
+				if ($this->_hasInsertsFor($class) && !$this->_commitInsertsFor($class)) {
+					$error = true;
+					break;
+				}
+				
+				if ($this->_hasUpdatesFor($class) && !$this->_commitUpdatesFor($class)) {
+					$error = true;
+					break;
+				}
 			}
 			
 			if (!$this->_commitHookSession()) {
 				throw new Exception("Unable to commit hook session");
 			}
-		}
 		} catch (Exception $e) {
 			$this->getAdapter()->rollbackTransaction();
 			throw $e;
 		}
 		
-		$this->getAdapter()->commit();
-		
-		$this->_lockRows = false;
+		if (!$soft) {
+			$this->getAdapter()->commitTransaction();
+			$this->_lockRows = false;
+		}
 		
 		return true;
+	}
+	
+	public function softCommit() {
+		return $this->commit(true);
 	}
 
 	/**
@@ -207,6 +214,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		} else {
 			$query->limit($limit, $offset);
 		}
+	
+		if ($this->_isMockQueriesSet()) {
+			$result = $this->_fetchMockResult($query->getHash());
+			if ($result !== false) {
+				return $result;
+			}
+		}
 		
 		return $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
 	}
@@ -216,7 +230,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		if (!array_key_exists($class, $this->_new)) {
 			return false;
 		}
-		return in_array($entity, $this->_new[$class]);
+		return in_array($entity, $this->_new[$class], true);
 	}
 	
 	public function isLoaded($class, $id=null) {
@@ -319,9 +333,14 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$method = $association->getMethod();
 			
 			$parentKey = $association->getParentKey();
+			$parentKeyGetter = 'get' . ucfirst($parentKey);
 			$foreignKey = $association->getForeignKey();
 			
 			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
+			if (is_null($matching_assoc)) {
+				throw new Exception("Unable to find matching association in '{$association->getClass()}' Entity for '{$method}' association in '{$class}' Entity");
+			}
+			
 			$otherside_method = $matching_assoc->getMethod();
 			$otherside_setter = 'set' . $otherside_method;
 			$otherside_getter = 'get' . $otherside_method;
@@ -333,13 +352,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 						$getter = 'get' . $method;
 						$dependent = $entity->$getter(false);
 						if (!is_null($dependent)) {
-							$entity->$foreignKey = $dependent->$parentKey;
+							$entity->$foreignKey = $dependent->$parentKeyGetter();
 							$dependent->$otherside_getter()->add($entity, false);
 						}
 					}
 					break;
 				case 'one-to-many':
-					if ($entity->$parentKey !== $actual->$parentKey) {
+					if ($entity->$parentKeyGetter() !== $actual->$parentKeyGetter()) {
 						continue;
 					}
 					
@@ -386,7 +405,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			}
 			$actual = clone($entity);
 			$pk_getter = 'get' . ucfirst($primaryKey);
-			$this->_actual[$class][$entity->$pk_getter()] = $entity;
+			$this->_actual[$class][$entity->$pk_getter()] = $actual;
 		}
 		
 		return true;
@@ -534,7 +553,16 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	protected function _registerHook($class, $object, $method, $type, $data) {
-		$this->_hooks[$type][$class][] = array('object'=>$object, 'method'=>$method, 'data'=>$data);
+		$hook = array('object'=>$object, 'method'=>$method, 'data'=>$data);
+		if (!isset($this->_hooks[$type])) {
+			$this->_hooks[$type] = array();
+		}
+		if (!isset($this->_hooks[$type][$class])) {
+			$this->_hooks[$type][$class] = array();
+		}
+		if (!in_array($hook, $this->_hooks[$type][$class])) {
+			$this->_hooks[$type][$class][] = $hook;
+		}
 	}
 	
 	public function registerInsertHook($class, $object, $method, $data=array()) {
@@ -569,6 +597,25 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 		
 		return $data;
+	}
+	
+	public function setMock(SimDAL_Query $query, $result, $count = 0) {
+		if (!isset($this->_mockQueries[$query->getHash()])) {
+			$this->_mockQueries[$query->getHash()] = array();
+		}
+		$this->_mockQueries[$query->getHash()]['result'] = $result;
+		$this->_mockQueries[$query->getHash()]['count'] = $count;
+	}
+	
+	protected function _isMockQueriesSet() {
+		return count($this->_mockQueries) > 0;
+	}
+	
+	protected function _fetchMockResult($hash) {
+		if (!isset($this->_mockQueries[$hash])) {
+			return false;
+		}
+		return $this->_mockQueries[$hash]['result'];
 	}
 	
 	/**

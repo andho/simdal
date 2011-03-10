@@ -12,13 +12,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		parent::rewind();
 	}
 	
-	public function count(SimDAL_Query $count = null) {
-		if (is_null($count)) {
-			$count = $this->_getQuery();
-		}
-		$this->_query = null;
-		$count = $this->_getSession()->count($count);
-		return $count['count'];
+	public function count() {
+		$this->_loadAll();
+		
+		return parent::count();
 	}
 	
 	/**
@@ -48,6 +45,12 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			throw new Exception('Object of invalid class has been passed');
 		}
 		
+		$parentKey = $this->_getAssociation()->getParentKey();
+		$foreignKey = $this->_getAssociation()->getForeignKey();
+		$setter = 'set' . ucfirst($foreignKey);
+		$getter = 'get' . ucfirst($parentKey);
+		$entity->$setter($this->_parent->$getter());
+		
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
 		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey) && !$this->_getSession()->isAdded($entity)) {
 			$this->_getSession()->addEntity($entity);
@@ -61,12 +64,11 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			throw new Exception('Object of invalid class has been passed');
 		}
 		for ($i=0; $i<count($this->_keymap); $i++) {
-			if ($this->_data[$this->_keymap[$i]] === $entity) {
+			if ($this->_data[$this->_keymap[$i]]->id == $entity->id) {
 				unset($this->_data[$this->_keymap[$i]]);
 				unset($this->_keymap[$i]);
 				$foreignKey = $this->_getAssociation()->getForeignKey();
 				$entity->$foreignKey = null;
-				$this->_getSession()->deleteEntity($entity);
 			}
 		}
 		
@@ -111,14 +113,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	 * 
 	 * @param string $column
 	 */
-	public function whereColumn($column) {
+	public function whereColumn(string $column) {
 		$query = $this->_getQuery();
 		
 		return $query->whereColumn($column);
-	}
-	
-	public function whereProperty($property) {
-		return $this->whereColumn($property);
 	}
 	
 	/**
@@ -148,6 +146,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			$this->_query = new SimDAL_Query($this);
 			$this->_query->from($this->_getSession()->getMapper()->getMappingForEntityClass($this->_getAssociation()->getClass()));
 			$parentKey = $this->_getAssociation()->getParentKey();
+<<<<<<< .mine
 			$parentKey_getter = 'get' . $parentKey;
 			$value = $this->_getParent()->$parentKey_getter();
 			if (is_null($value)) {
@@ -155,6 +154,9 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 				return false;
 			}
 			$this->_query->whereColumn($this->_getAssociation()->getForeignKey())->equals($value);
+=======
+			$this->_query->whereColumn($this->_getAssociation()->getForeignKey())->equals($this->_getParent()->$parentKey);
+>>>>>>> .r35
 		}
 		
 		return $this->_query;

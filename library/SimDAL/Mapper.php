@@ -164,7 +164,7 @@ class SimDAL_Mapper {
 	}
 	
 	public function hasDescendants($class) {
-		if (is_array($this->map[$class]['descendants'])) {
+		if (isset($this->map[$class]['descendants']) && is_array($this->map[$class]['descendants'])) {
 			return true;
 		}
 		

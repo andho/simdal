@@ -151,13 +151,17 @@ class SimDAL_Query {
 	/**
 	 * 
 	 * @param string $column
-	 * @return SimDAL_Query
+	 * @return SimDAL_Query_OrderBy
 	 */
 	public function orderBy($column) {
 		$column = $this->_from->getColumn($column);
-		$this->_orderBy = new SimDAL_Query_OrderBy($column);
+		$this->_orderBy = new SimDAL_Query_OrderBy($column, $this);
 		
-		return $this;
+		return $this->_orderBy;
+	}
+	
+	public function getOrderBy() {
+		return $this->_orderBy;
 	}
 	
 	/**
@@ -228,6 +232,21 @@ class SimDAL_Query {
 		}
 		
 		return false;
+	}
+	
+	public function __toString() {
+		$string = implode(',', $this->getColumns());
+		$string .= $this->getFrom();
+		//$string .= $this->_where->__toString();
+		foreach ($this->_where as $where) {
+			$string .= $where->__toString();
+		}
+		
+		return $string;
+	}
+	
+	public function getHash() {
+		return md5($this->__toString());
 	}
 	
 }
