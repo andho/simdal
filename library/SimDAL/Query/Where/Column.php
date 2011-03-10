@@ -186,4 +186,12 @@ class SimDAL_Query_Where_Column implements SimDAL_Query_Where_Interface {
 		return 'WhereColumn';
 	}
 	
+	public function __toString() {
+		$string = $this->_column->getProperty();
+		$string .= $this->_comparison;
+		$string .= $this->_value;
+		
+		return $string;
+	}
+	
 }

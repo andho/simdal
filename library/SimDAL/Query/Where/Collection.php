@@ -35,4 +35,13 @@ class SimDAL_Query_Where_Collection implements SimDAL_Query_Where_Interface {
 		return null;
 	}
 	
+	public function __toString() {
+		$string = '';
+		foreach ($this->_wheres as $where) {
+			$string .= $where->__toString();
+		}
+		
+		return $string;
+	}
+	
 }

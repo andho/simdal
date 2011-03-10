@@ -36,6 +36,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected $_lockRows = false;
 	protected $_hooks = array();
 	protected $_hookSession;
+	protected $_mockQueries = array();
 	
 	/**
 	 * @return SimDAL_Session_Factory
@@ -229,6 +230,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$query->limit(1);
 		} else {
 			$query->limit($limit, $offset);
+		}
+		
+		if ($this->_isMockQueriesSet()) {
+			$result = $this->_fetchMockResult($query->getHash());
+			if ($result !== false) {
+				return $result;
+			}
 		}
 		
 		return $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
@@ -619,6 +627,25 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		}
 		
 		return $data;
+	}
+	
+	public function setMock(SimDAL_Query $query, $result, $count = 0) {
+		if (!is_array($this->_mockQueries[$query->getHash()])) {
+			$this->_mockQueries[$query->getHash()] = array();
+		}
+		$this->_mockQueries[$query->getHash()]['result'] = $result;
+		$this->_mockQueries[$query->getHash()]['count'] = $count;
+	}
+	
+	protected function _isMockQueriesSet() {
+		return count($this->_mockQueries) > 0;
+	}
+	
+	protected function _fetchMockResult($hash) {
+		if (!isset($this->_mockQueries[$hash])) {
+			return false;
+		}
+		return $this->_mockQueries[$hash]['result'];
 	}
 	
 	/**

@@ -272,4 +272,19 @@ class SimDAL_Query {
 		return false;
 	}
 	
+	public function __toString() {
+		$string = implode(',', $this->getColumns());
+		$string .= $this->getFrom();
+		//$string .= $this->_where->__toString();
+		foreach ($this->_where as $where) {
+			$string .= $where->__toString();
+		}
+		
+		return $string;
+	}
+	
+	public function getHash() {
+		return md5($this->__toString());
+	}
+	
 }
