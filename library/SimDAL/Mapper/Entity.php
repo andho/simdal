@@ -237,7 +237,7 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 				$autoIncrement = isset($column_data[2]['autoIncrement'])?$column_data[2]['autoIncrement']:null;
 				$alias = isset($column_data[2]['alias'])?$column_data[2]['alias']:null;
 			}
-			$this->_columns[$property] = new SimDAL_Mapper_Column($this->getClass(), $this->getTable(), $property, $column_data[0], $column_data[1], $pk, $autoIncrement, $alias);
+			$this->_columns[$property] = new SimDAL_Mapper_Column($this, $property, $column_data[0], $column_data[1], $pk, $autoIncrement, $alias);
 			if (array_key_exists(2, $column_data)) {
 				if (array_key_exists('pk', $column_data[2]) && $column_data[2]['pk'] === true) {
 					$this->_primaryKey = $property;
