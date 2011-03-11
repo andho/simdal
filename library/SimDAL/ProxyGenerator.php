@@ -1,33 +1,51 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_ProxyGenerator {
 	
 	static public function generateProxies(SimDAL_Mapper $mapper, $cachedir) {
 		$cachedir = preg_replace('/[\/\\\\]$/', '', $cachedir);
 		if (!is_dir($cachedir)) {
-			if (!mkdir($cachedir, 0775, true)) {
-				echo "Could not create cache directory";
-				return false;
-			}
+			throw new Exception('.simdal directory doesn\'t exist in your Domain');
 		}
-		
-		$cachefile = $cachedir . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
-		if (!is_file($cachefile)) {
-			touch($cachefile);
+		if (!is_dir($cachedir . DIRECTORY_SEPARATOR . 'config')) {
+			throw new Exception('.simdal/config directory doesn\'t exist in your Domain');
+		}
+		$proxy_dir = $cachedir . DIRECTORY_SEPARATOR . 'proxies';
+		if (!is_dir($proxy_dir) && !mkdir($proxy_dir, 0775, true)) {
+			throw new Exception('Could not create the proxy directory \'' . $proxy_dir . '\' for SimDAL');
 		}
 		
 		$classes = $mapper->getClasses();
-		$output = '<?php' . PHP_EOL . PHP_EOL;
 		foreach ($classes as $class) {
-			$output .= self::_generateProxy($mapper->getMappingForEntityClass($class));
+			self::generateProxy($mapper->getMappingForEntityClass($class));
 		}
 		//echo '<pre>' . $output . '</pre>';
-		file_put_contents($cachefile, $output);
 		
 		//include $cachefile;
 	}
 	
-	static protected function _generateProxy(SimDAL_Mapper_Entity $mapping) {
+	static public function generateProxy(SimDAL_Mapper_Entity $mapping, $proxy_file) {
 		$class = $mapping->getClass();
 		
 		if (!class_exists($class)) {
@@ -37,9 +55,9 @@ class SimDAL_ProxyGenerator {
 		$proxy_class = $class . 'Proxy';
 		
 		$class = self::_generateProxyClass($mapping);
-		$helper_properties .= self::_generateHelperProperties($mapping);
-		$helper_methods .= self::_generateHelperMethods($mapping);
-		$proxy_methods .= self::_generateProxyMethods($mapping);
+		$helper_properties = self::_generateHelperProperties($mapping);
+		$helper_methods = self::_generateHelperMethods($mapping);
+		$proxy_methods = self::_generateProxyMethods($mapping);
 		
 		$class .= $helper_properties;
 		$class .= $helper_methods;
@@ -60,6 +78,14 @@ class SimDAL_ProxyGenerator {
 			}
 		}
 		
+		
+		if (!is_file($proxy_file)) {
+			touch($proxy_file);
+		}
+		$output = '<?php' . PHP_EOL . PHP_EOL;
+		$output .= $class;
+		file_put_contents($proxy_file, $output);
+		
 		return $class;
 	}
 	
@@ -77,7 +103,7 @@ class SimDAL_ProxyGenerator {
 		$associations = $mapping->getAssociations();
 		$output = '';
 		
-		$output .= 'private $_session;' . PHP_EOL;
+		$output .= '	private $_session;' . PHP_EOL;
 		
 		/* @var $association SimDAL_Mapper_Association */
 		if (count($associations)) {
@@ -226,24 +252,35 @@ class SimDAL_ProxyGenerator {
 		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
 		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
 		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
-		$output .= '			$this->' . $setter . '(' . PHP_EOL;
-		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
-		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;
-		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
-		$output .= '				->fetch()' . PHP_EOL;
-		$output .= '			);' . PHP_EOL;
+		if ($association->isDependent ()) {
+			$output .= '                    $this->' . $setter . '(' . PHP_EOL;
+			$output .= '                            $session->load(\'' . $association->getClass () . '\')' . PHP_EOL;
+			$output .= '                            ->whereColumn(\'' . $association->getParentKey () . '\')' . PHP_EOL;
+			$output .= '                            ->equals($this->get' . ucfirst ( $association->getForeignKey () ) . '())' . PHP_EOL;
+			$output .= '                            ->fetch()' . PHP_EOL;
+			$output .= '                    );' . PHP_EOL;
+		} else if ($association->isParent ()) {
+			$output .= '                    $this->' . $setter . '(' . PHP_EOL;
+			$output .= '                            $session->load(\'' . $association->getClass () . '\')' . PHP_EOL;
+			$output .= '                            ->whereColumn(\'' . $association->getForeignKey () . '\')' . PHP_EOL;
+			$output .= '                            ->equals($this->get' . ucfirst ( $association->getParentKey () ) . '())' . PHP_EOL;
+			$output .= '                            ->fetch()' . PHP_EOL;
+			$output .= '                    );' . PHP_EOL;
+		}
 		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
-		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
-		$output .= '		if (!is_null($value)) {' . PHP_EOL;
-		$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
-		$output .= '		}' . PHP_EOL;
-		$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
-		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
-		$output .= '	}' . PHP_EOL . PHP_EOL;
+		if ($association->isDependent()) {
+			$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
+			$output .= '		if (!is_null($value)) {' . PHP_EOL;
+			$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
+			$output .= '		}' . PHP_EOL;
+			$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+			$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
+			$output .= '	}' . PHP_EOL . PHP_EOL;
+		}
 		
 		return $output;
 	}

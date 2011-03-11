@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstract {
 	
@@ -10,6 +31,19 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	private $_transaction = true;
 	
 	public function __construct($mapper, $session, $conf) {
+		if (!isset($conf['host'])) {
+			throw new Exception("Database configuation doesn't specify database host");
+		}
+		if (!isset($conf['username'])) {
+			throw new Exception("Database configuation doesn't specify database username");
+		}
+		if (!isset($conf['password'])) {
+			throw new Exception("Database configuation doesn't specify database password");
+		}
+		if (!isset($conf['database'])) {
+			throw new Exception("Database configuation doesn't specify database database");
+		}
+		
 		parent::__construct($mapper, $session);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
@@ -113,8 +147,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		return $rows;
 	}
 	
-	protected function _processInsertQuery($class, $data) {
-		$table = $this->_getMapper()->getTable($class);
+	protected function _processInsertQuery(SimDAL_Mapper_Entity $entity, $data) {
+		$table = $entity->getTable();
 		
 		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
@@ -365,7 +399,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 			if ($value instanceof SimDAL_Mapper_Entity) {
 				$set .= $this->_processWhereColumn($value->getTable(), $value->getColumn());
 			} else {
-				$set .= $this->_transformData($column->getColumn(), $value, $column->getClass());
+				$set .= $this->_transformData($column, $value, $column->getEntity());
 			}
 			
 			$sets[] = $set;

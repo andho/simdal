@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Mapper {
 	
@@ -6,12 +27,19 @@ class SimDAL_Mapper {
 	const COMPARE_LESS = 1;
 	
 	protected $map = array();
+	protected $_mappings = array();
 	
 	protected $_priority = array();
 	protected $_priority2 = array();
 	
-	public function __construct($map) {
-		$this->map = $map;
+	public function __construct() {
+		SimDAL_Autoload::registerMapper($this);
+	}
+	
+	public function addMappingForEntityClass($class, $mapping) {
+		$this->map[$class] = $mapping;
+		
+		return $this->getMappingForEntityClass($class);
 	}
 	
 	public function getClasses() {
@@ -19,7 +47,7 @@ class SimDAL_Mapper {
 	}
 	
 	public function getTable($class) {
-		if (!array_key_exists($class, $this->map)) {
+		if (!is_array($this->map) || (!is_numeric($class) && !is_string($class)) || !array_key_exists($class, $this->map)) {
 			return false;
 		}
 		
@@ -164,11 +192,20 @@ class SimDAL_Mapper {
 	}
 	
 	public function hasDescendants($class) {
-		if (isset($this->map[$class]['descendants']) && is_array($this->map[$class]['descendants'])) {
-			return true;
+		if (!isset($this->_map[$class])) {
+			return false;
+		}
+		if (!isset($this->map[$class]['descendants'])) {
+			return false;
+		}
+		if (!is_array($this->map[$class]['descendants'])) {
+			return false;
+		}
+		if (count($this->map[$class]['descendants']) == 0) {
+			return false;
 		}
 		
-		return false;
+		return true;
 	}
 	
 	public function getDescendants($class) {
@@ -224,8 +261,18 @@ class SimDAL_Mapper {
 	 * @return SimDAL_Mapper_Entity
 	 */
 	public function getMappingForEntityClass($class) {
+		if (!class_exists($class, true)) {
+			throw new Exception('\'' . $class . '\' is not a valid Class');
+		}
 		$class = $this->getDomainEntityNameFromClass($class);
-	    return new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
+		if (!is_array($this->map) || !array_key_exists($class, $this->map)) {
+			throw new Exception("The entity class given is not valid");
+		}
+		if (!isset($this->_mappings[$class]) || !$this->_mappings[$class] instanceof SimDAL_Mapper_Entity) {
+			$this->_mappings[$class] = new SimDAL_Mapper_Entity($class, $this->map[$class], $this);
+		}
+		
+	    return $this->_mappings[$class];
 	}
 	
 	public function compare($class1, $class2) {

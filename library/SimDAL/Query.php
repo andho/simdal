@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Query {
 	
@@ -19,16 +40,25 @@ class SimDAL_Query {
 	protected $_type;
 	protected $_sets = array();
 	protected $_orderBy = null;
+	protected $_mapper;
 	
 	/**
 	 * 
 	 * @param SimDAL_Query_ParentInterface $parent A parent object of which the execute function will be called. Object must implement SimDAL_Query_ParentInterface
 	 * @param String $type Type of query to create. Options are 'select', 'update' and 'delete'
 	 */
-	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT) {
+	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT, SimDAL_Mapper $mapper) {
 		$this->_parent = $parent;
 		$this->_type = $type;
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
+		$this->_mapper = $mapper;
+	}
+	
+	/**
+	 * @return SimDAL_Mapper
+	 */
+	protected function _getMapper() {
+		return $this->_mapper;
 	}
 	
 	/**
@@ -38,6 +68,14 @@ class SimDAL_Query {
 	 * @return SimDAL_Query
 	 */
 	public function from(SimDAL_Mapper_Entity $entity, array $columns = array()) {
+		if (is_string($entity)) {
+			$entity = $this->_getMapper()->getMappingForEntityClass($entity);
+		} else if (!$entity instanceof SimDAL_Mapper_Entity) {
+			if (is_object($entity)) {
+				$type = get_class($entity);
+			}
+			throw new Exception("Argument 1 passed to SimDAL_Query::from should be an instance of SimDAL_Mapper_Entity or string, '" . $type . "' given");
+		}
 	    $this->_columns = $columns;
 		$this->_from = $entity;
 		

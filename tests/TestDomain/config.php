@@ -1,40 +1,7 @@
 <?php
-
-$config = array(
-	'entities'=>array(
-		'Project'=>array(
-			'name'=>'Project',
-			'properties'=>array(
-				'id',
-				'name',
-				'description',
-				'type'
-			),
-			'relations'=>array(
-				'parents'=>array(
-					'type'=>array(
-						'entity'=>'Type',
-						'type'=>'one-to-many',
-						'foreignKey'=>'type'
-					)
-				)
-			)
-		),
-		'Type'=>array(
-			'name'=>'Type',
-			'properties'=>array(
-				'id',
-				'type'
-			),
-			'relations'=>array(
-				'dependents'=>array(
-					'parent'=>array(
-						'entity'=>'Parent',
-						'type'=>'many-to-one',
-						'foreignKey'=>'type'
-					)
-				)
-			)
-		)
+return array(
+	'db' => array(
+		'filename' => DOMAIN_PATH . DIRECTORY_SEPARATOR . 'test.db',
+		'class' => 'SimDAL_Persistence_PDO_SqLite3Adapter'
 	)
 );

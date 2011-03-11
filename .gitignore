@@ -1,0 +1,6 @@
+# Zend Studio project files #
+.settings
+.project
+.buildpath
+tests/TestDomain/cache
+tests/TestDomain/.simdal/proxies

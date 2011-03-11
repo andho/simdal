@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 
@@ -76,6 +97,9 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		$this->_schema = isset($map['schema']) ? $map['schema'] : '';
 		$this->_table = isset($map['table']) ? $map['table'] : '';
 		$this->_columnsRawData = isset($map['columns']) ? $map['columns'] : array();
+		if (isset($map['schema'])) {
+			$this->_schema = $map['schema'];
+		}
 		if (isset($map['associations']) && is_array($map['associations'])) {
 			$this->_associations = $map['associations'];
 		}
@@ -141,8 +165,31 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return $this->_associations;
 	}
 
+	public function hasDescendents() {
+		return count($this->_descendents) > 0;
+	}
+	
 	public function getDescendents() {
 		return $this->_descendents;
+	}
+	
+	/**
+	 * 
+	 * @param $entity
+	 * @return SimDAL_Mapper_Descendent
+	 */
+	public function getDescendentMappingFromEntity($entity) {
+		$class = get_class($entity);
+		$class = preg_match('/SimDALProxy$/', '', $class);
+		
+		/* @var $descendent SimDAL_Mapper_Descendent */
+		foreach ($this->getDescendents() as $descendent_class=>$descendent) {
+			if ($class == $descendent->getClass()) {
+				return $descendent;
+			}
+		}
+		
+		return null;
 	}
 	
 	public function getDescendentClass($row) {

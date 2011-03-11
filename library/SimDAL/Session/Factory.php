@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Session_Factory {
 	
@@ -12,26 +33,10 @@ class SimDAL_Session_Factory {
 		}
 		$this->_setupDatabaseSettings($conf['db']);
 		
-		if (!isset($conf['map'])) {
-			throw new Exception("SimDAL configuration doesn't have mapper configuration");
-		}
-		$this->_mapper = new SimDAL_Mapper($conf['map']);
+		$this->_mapper = new SimDAL_Mapper();
 	}
 	
 	protected function _setupDatabaseSettings($db) {
-		if (!isset($db['host'])) {
-			throw new Exception("Database configuation doesn't specify database host");
-		}
-		if (!isset($db['username'])) {
-			throw new Exception("Database configuation doesn't specify database username");
-		}
-		if (!isset($db['password'])) {
-			throw new Exception("Database configuation doesn't specify database password");
-		}
-		if (!isset($db['database'])) {
-			throw new Exception("Database configuation doesn't specify database database");
-		}
-		
 		$this->_db = $db;
 	}
 	
@@ -50,15 +55,6 @@ class SimDAL_Session_Factory {
 	 * @return SimDAL_Session
 	 */
 	public function getNewSession() {
-		$proxyFile = DOMAIN_PATH . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'simdal_proxies.inc';
-		if (!is_file($proxyFile)) {
-			throw new Exception('Proxy file not found');
-		} else if (!is_readable($proxyFile)) {
-			throw new Exception('Unable to load proxy file');
-		} else {
-			include_once $proxyFile;
-		}
-	
 		$adapter_class = $this->_db['class'];
 		return new SimDAL_Session($this->_mapper, $adapter_class, $this->_db);
 	}

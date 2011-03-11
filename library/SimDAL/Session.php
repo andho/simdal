@@ -1,4 +1,25 @@
 <?php
+/**
+ * SimDAL - Simple Domain Abstraction Library.
+ * This library will help you to separate your domain logic from
+ * your persistence logic and makes the persistence of your domain
+ * objects transparent.
+ * 
+ * Copyright (C) 2011  Andho
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
@@ -42,6 +63,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		if (!is_null($adapter_class)) {
 			$this->_adapter = $adapter_class;
+		}
+		if ($adapter_class instanceof SimDAL_Persistence_AdapterAbstract) {
+			$this->_adapter = $adapter_class;
+			return;
 		}
 		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
 			throw new Exception("Supplied Adapter Class is not a valid class name");
@@ -123,20 +148,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$this->_actual[$class][$entity->$pk_getter()] = $actual;
 	}
 	
-	public function deleteEntity($entity, $class=null, $column=null) {
-		if (is_object($entity)) {
+	public function deleteEntity($entity) {
 			$class = $this->getMapper()->getClassFromEntity($entity);
-			$table = $this->getMapper()->getTable($class);
-			
-			$this->_delete[$class][$entity->id] = $entity;
-		} else if (!is_null($column)) {
-			$this->_delete[$class][$column][] = $entity;
-		} else {
-			if (is_null($class)) {
-				return false;
-			}
-			$this->_delete[$class][$entity] = $entity;
-		}
+		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $entityMapping->getPrimaryKey();
+		$pk_getter = 'get' . $primaryKey;
+		
+		$this->_delete[$class][$entity->$pk_getter()] = $entity;
 	}
 	
 	public function commit($soft=false) {
@@ -154,7 +172,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$error = false;
 		try {
 			foreach ($priority as $class) {
-				if ($this->_hasDeletesFor($class)) {
+				if ($this->_hasDeletesFor($class) && !$this->_commitDeletesFor($class)) {
 					$error = true;
 				}
 				
@@ -194,7 +212,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function load($class) {
-		$query = new SimDAL_Query($this);
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_SELECT, $this->getMapper());
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
 		return $query;
@@ -284,7 +302,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function update($class) {
-		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_UPDATE);
+		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_UPDATE);
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
@@ -297,7 +315,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function delete($class) {
-		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_DELETE);
+		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_DELETE);
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
@@ -311,7 +329,12 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected function _resolveDependencies() {
 		foreach ($this->_new as $class=>$entities) {
 			foreach ($entities as $entity) {
-				$this->_resolveEntityDependencies($entity);
+				//$this->_resolveEntityDependencies($entity);
+			}
+		}
+		foreach ($this->_modified as $class=>$entities) {
+			foreach ($entities as $entity) {
+				//$this->_resolveEntityDependencies($entity);
 			}
 		}
 	}
@@ -333,8 +356,9 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$method = $association->getMethod();
 			
 			$parentKey = $association->getParentKey();
-			$parentKeyGetter = 'get' . ucfirst($parentKey);
+			$parentKey_getter = 'get' . $parentKey;
 			$foreignKey = $association->getForeignKey();
+			$foreignKey_setter = 'set' . $foreignKey;
 			
 			$matching_assoc = $association->getMatchingAssociationFromAssociationClass();
 			if (is_null($matching_assoc)) {
@@ -352,13 +376,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 						$getter = 'get' . $method;
 						$dependent = $entity->$getter(false);
 						if (!is_null($dependent)) {
-							$entity->$foreignKey = $dependent->$parentKeyGetter();
+							$entity->$foreignKey_setter($dependent->$parentKey_getter());
 							$dependent->$otherside_getter()->add($entity, false);
 						}
 					}
 					break;
 				case 'one-to-many':
-					if ($entity->$parentKeyGetter() !== $actual->$parentKeyGetter()) {
+					if ($entity->$parentKey_getter() !== $actual->$parentKey_getter()) {
 						continue;
 					}
 					
@@ -366,14 +390,30 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 					$dependents = $entity->$getter();
 					foreach ($dependents->toArray() as $dependent) {
 						$dependent->$otherside_setter($entity);
-						$dependent->$foreignKey = $entity->$parentKey;
+						$dependent->$foreignKey_setter($entity->$parentKey_getter());
 					}
 					
-					$this->update($association->getClass())->set($foreignKey, $entity->$parentKey)->whereColumn($foreignKey)->equals($entity->$parentKey)->execute();
+					$this->update($association->getClass())->set($foreignKey, $entity->$parentKey_getter())->whereColumn($foreignKey)->equals($actual->$parentKey_getter())->execute();
 					
 					break;
 			}
 		}
+	}
+	
+	protected function _commitDeletesFor($class) {
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		$primaryKey = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($primaryKey);
+		foreach ($this->_deleted[$class] as $key=>$entity) {
+			if (!$this->getAdapter()->deleteEntity($entity)) {
+				return false;
+			}
+			$this->_processDeleteHooks($entity);
+			
+			unset($this->_deleted[$class][$entity->$pk_getter()]);
+		}
+		
+		return true;
 	}
 	
 	protected function _commitInsertsFor($class) {
@@ -389,7 +429,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$entity->_SimDAL_setPrimaryKey($id);
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
 			$this->_processInsertHooks($entity);
-			$this->update($entity);
+			$this->updateEntity($entity);
 		}
 		
 		return true;
@@ -398,13 +438,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	protected function _commitUpdatesFor($class) {
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($primaryKey);
 		foreach ($this->_modified[$class] as $key=>$entity) {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
 			if (!$this->getAdapter()->updateEntity($entity)) {
 				return false;
 			}
 			$actual = clone($entity);
-			$pk_getter = 'get' . ucfirst($primaryKey);
 			$this->_actual[$class][$entity->$pk_getter()] = $actual;
 		}
 		
@@ -517,7 +557,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	protected function _processInsertHooks($entity) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
-		if (!array_key_exists($class, $this->_hooks['insert'])) {
+		if (!is_array($this->_hooks) || !array_key_exists('insert', $this->_hooks) || !array_key_exists($class, $this->_hooks['insert'])) {
 			return;
 		}
 		
@@ -529,7 +569,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	protected function _processUpdateHooks($entity, $actual) {
 		$class = $this->getMapper()->getClassFromEntity($entity);
-		if (!array_key_exists($class, $this->_hooks['update'])) {
+		if (!is_array($this->_hooks) || !array_key_exists('update', $this->_hooks) || !array_key_exists($class, $this->_hooks['update'])) {
 			return;
 		}
 		
