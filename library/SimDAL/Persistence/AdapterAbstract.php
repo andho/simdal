@@ -136,21 +136,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$sql = $this->_processDeleteQuery($mapping, $entity->$getter());
 		$result = $this->execute($sql);
 		if ($result === false) {
-			throw new SimDAL_Persistence_AdapterException($this, $this->getAdapterError() . ' for entity ' . get_class($entity));
-		}
-		
-		return true;
-	}
-	
-	public function deleteEntity($entity) {
-		$class = $this->_getMapper()->getClassFromEntity($entity);
-		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
-		$pk = $mapping->getPrimaryKey();
-		$getter = 'get' . ucfirst($pk);
-		
-		$sql = $this->_processDeleteQuery($mapping, $entity->$getter());
-		$result = $this->execute($sql);
-		if ($result === false) {
 			throw new Exception($this->getAdapterError());
 		}
 		

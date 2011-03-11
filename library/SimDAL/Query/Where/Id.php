@@ -50,8 +50,4 @@ class SimDAL_Query_Where_Id implements SimDAL_Query_Where_Interface {
 		return 'WhereId';
 	}
 	
-	public function getOperator() {
-		return '=';
-	}
-	
 }
