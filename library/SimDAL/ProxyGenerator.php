@@ -53,6 +53,7 @@ class SimDAL_ProxyGenerator {
 		}
 		
 		$proxy_class = $class . 'Proxy';
+		$class_name = $class;
 		
 		$class = self::_generateProxyClass($mapping);
 		$helper_properties = self::_generateHelperProperties($mapping);
@@ -64,6 +65,13 @@ class SimDAL_ProxyGenerator {
 		$class .= $proxy_methods;
 		$class .= '}' . PHP_EOL . PHP_EOL;
 		
+		if (!is_file($proxy_file)) {
+			touch($proxy_file);
+		}
+		$output = '<?php' . PHP_EOL . PHP_EOL;
+		$output .= $class;
+		file_put_contents($proxy_file, $output);
+		
 		$descendents = $mapping->getDescendents();
 		$prefix = $mapping->getDescendentPrefix();
 		/* @var $descendents SimDAL_Mapper_Descendent */
@@ -74,17 +82,24 @@ class SimDAL_ProxyGenerator {
 				$descendent_class .= $helper_methods;
 				$descendent_class .= $proxy_methods;
 				$descendent_class .= '}' . PHP_EOL . PHP_EOL;
-				$class .= $descendent_class;
+				
+				$proxy_class_filename = str_replace('_', '/', $class_name);
+				$descendent_filename = str_replace('_', '/', $prefix . $descendent->getClass());
+				$descendent_proxy_file = preg_replace('/'.$proxy_class_filename.'/', $descendent_filename, $proxy_file);
+				$dirname = dirname($descendent_proxy_file);
+				
+				if (!is_dir($dirname)) {
+					mkdir($dirname, 0755, true);
+				}
+				
+				if (!is_file($descendent_proxy_file)) {
+					touch($descendent_proxy_file);
+					$output = '<?php' . PHP_EOL . PHP_EOL;
+					$output .= $descendent_class;
+					file_put_contents($descendent_proxy_file, $output);
+				}
 			}
 		}
-		
-		
-		if (!is_file($proxy_file)) {
-			touch($proxy_file);
-		}
-		$output = '<?php' . PHP_EOL . PHP_EOL;
-		$output .= $class;
-		file_put_contents($proxy_file, $output);
 		
 		return $class;
 	}

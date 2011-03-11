@@ -173,7 +173,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	 */
 	protected function _getQuery() {
 		if (is_null($this->_query)) {
-			$this->_query = new SimDAL_Query($this, $this->_getSession()->getMapper());
+			$this->_query = new SimDAL_Query($this, SimDAL_Query::TYPE_SELECT,  $this->_getSession()->getMapper());
 			$this->_query->from($this->_getSession()->getMapper()->getMappingForEntityClass($this->_getAssociation()->getClass()));
 			$parentKey = $this->_getAssociation()->getParentKey();
 			$parentKey_getter = 'get' . $parentKey;

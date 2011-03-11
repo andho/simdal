@@ -68,28 +68,38 @@ class SimDAL_Autoload {
         
         if (preg_match('/^([^ _]*)?(_[^ _]*)*$/', $class, $matches)) {
 	        $class_file = str_replace('_', '/', $class);
-        	if (is_file(self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php')) {
-        		// load class
-	        	include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php';
-	        	
-	        	// load configuration
-	        	foreach (self::$_mappers as $mapper) {
-	        		$mapping = $mapper->addMappingForEntityClass($class, include( self::getConfigDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php') );
+	        if (preg_match('/SimDALProxy$/', $class_file)) {
+	        	$class_file = preg_replace('/SimDALProxy/', '', $class_file);
+	        	if (is_file(self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc')) {
+	        		include self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
+	        		return true;
 	        	}
-	        	
-	        	// create/load proxy
-	        	if (!is_dir(self::getProxyDirectory())) {
-	        		if (!mkdir(self::getProxyDirectory(), 0775, true)) {
-	        			throw new Exception('Unable to create proxy directory in \'' . self::getProxyDirectory() . '\'');
-	        		}
+	        } else if (is_file(self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php')) {
+	        	if (is_file(self::getConfigDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php')) {
+	        		// load class
+		        	include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php';
+		        	
+		        	// load configuration
+		        	foreach (self::$_mappers as $mapper) {
+		        		$mapping = $mapper->addMappingForEntityClass($class, include( self::getConfigDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php') );
+		        	}
+		        	
+		        	// create/load proxy
+		        	if (!is_dir(self::getProxyDirectory())) {
+		        		if (!mkdir(self::getProxyDirectory(), 0775, true)) {
+		        			throw new Exception('Unable to create proxy directory in \'' . self::getProxyDirectory() . '\'');
+		        		}
+		        	}
+		        	$proxy_file = self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
+		        	if (!is_file($proxy_file)) {
+		        		SimDAL_ProxyGenerator::generateProxy($mapping, $proxy_file);
+		        	}
+		        	include self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
+		        	
+		        	return true;
+	        	} else {
+	        		include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php';
 	        	}
-	        	$proxy_file = self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
-	        	if (!is_file($proxy_file)) {
-	        		SimDAL_ProxyGenerator::generateProxy($mapping, $proxy_file);
-	        	}
-	        	include self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc';
-	        	
-	        	return true;
         	} else {
         		include $class_file . '.php';
         		return true;
