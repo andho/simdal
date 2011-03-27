@@ -204,6 +204,17 @@ class SimDAL_Query_Where_Column implements SimDAL_Query_Where_Interface {
 		return $this->_query;
 	}
 	
+	/**
+	 * @param array $value
+	 * @return SimDAL_Query
+	 */
+	public function isNotIn(array $value) {
+		$this->_comparison = 'NOT IN';
+		$this->_value = $value;
+		
+		return $this->_query;
+	}
+	
 	public function getProcessMethod() {
 		return 'WhereColumn';
 	}

@@ -131,7 +131,7 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	}
 	
 	protected function _processInsertQuery(SimDAL_Mapper_Entity $mapping, $data) {
-		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." (".implode(',',array_keys($data)).") VALUES (";
+		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." ('".implode('\',\'',array_keys($data))."') VALUES (";
 		foreach ($data as $key=>$value) {
 			$sql .= ':'.$key.',';
 		}
@@ -147,14 +147,22 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	protected function _returnResultRows($sql, $class, $lockRows = false) {
 		$this->_connect();
 		
-		$query = $this->_conn->query($sql);
+		if ($sql instanceof PDOStatement) {
+			$query = $sql->execute();
+		} else {
+			$query = $this->_conn->query($sql);
+		}
 		
 		if ($query === false) {
 			return $this->_returnEntities(array(), $class);
 		}
+		
+		if ($sql instanceof PDOStatement) {
+			$query = $sql;
+		}
 	
 		$rows = array();
-		while ($row = $query->fetchArray()) {
+		while ($row = $query->fetch()) {
 			$rows[] = $row;
 		}
 		
@@ -164,11 +172,28 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
 		$this->_connect();
 		
-		$row = $sql->execute();
+		if ($sql instanceof PDOStatement) {
+			$row = $sql->execute();
+		} else {
+			$row  = $this->_conn->query($sql);
+		}
+		
+		if ($row === false) {
+			return false;
+		}
+		
+		if ($row instanceof PDOStatement) {
+			$sql = $row;
+		}
+		
 		if (!$row) {
 			return null;
 		}
 		$row = $sql->fetch();
+		
+		if ($row === false) {
+			return null;
+		}
 		
 		if (is_null($class)) {
 			return $row;
@@ -182,17 +207,18 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	}
 	
 	public function lastInsertId() {
-		return $this->_conn->lastInsertRowID();
+		return $this->_conn->lastInsertId();
 	}
 	
 	public function getAdapterError() {
-		RETURN $this->_conn->lastErrorMsg();
+		$error_info = $this->_conn->errorInfo();
+		return $error_info[2];
 	}
 	
 	public function escape($value, $type=null) {
 		$this->_connect();
 		
-		return $this->_conn->escapeString($value);
+		return $value;
 	}
 	
 	protected function _whereRange($key, $values) {
@@ -213,7 +239,9 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	}
 	
 	public function rollbackTransaction() {
-		$this->_conn->rollBack();
+		if ($this->_conn) {
+			$this->_conn->rollBack();
+		}
 		return false;
 	}
 	
@@ -235,14 +263,14 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	public function execute($sql) {
 		$this->_connect();
 		
-		$result = $this->_conn->exec($sql);
+		if ($sql instanceof PDOStatement) {
+			$result = $sql->execute();
+		} else {
+			$result = $this->_conn->query($sql);
+		}
 		
 		if ($result === false) {
 			return false;
-		}
-		
-		if ($result === true) {
-			return $this->_conn->changes();
 		}
 		
 		return $result;
@@ -410,6 +438,8 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 			}
 		} else if (is_array($value)) {
 			return $this->_processWhereArray($value);
+		} else if (is_null($value)) {
+			return 'NULL';
 		} else {
 			return "'" . $this->escape($value) . "'";
 		}
@@ -428,11 +458,13 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	}
 	
 	protected function _processWhereArray(array $value) {
+		$value = '(\'' . implode('\',\'', $value) . '\')';
 		
+		return $value;
 	}
 	
 	protected function _processWhereOperator($operator) {
-		return $operator;
+		return ' ' . $operator . ' ';
 	}
 	
 	protected function _processQueryLimit($limit, $offset, SimDAL_Query $query) {
@@ -440,7 +472,7 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 		if (is_numeric($limit)) {
 			$output = $limit;
 			if (is_numeric($offset)) {
-				$output = $offset . ", " . $output;
+				$output = $output . ' OFFSET ' . $offset;
 			}
 			
 			$output = 'LIMIT ' . $output;

@@ -61,6 +61,10 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		mysqli_autocommit($this->_conn, false);
 	}
 	
+	public function __destruct() {
+		$this->_disconnect();
+	}
+	
 	protected function _disconnect() {
 		if (is_resource($this->_conn)) {
 			$this->_rollbackTransaction();
@@ -233,14 +237,12 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	
 	public function commitTransaction() {
 		$result = mysqli_commit($this->_conn);
-		mysqli_autocommit($this->_conn, true);
 		
 		return $result;
 	}
 	
 	public function rollbackTransaction() {
 		$result = mysqli_rollback($this->_conn);
-		mysqli_autocommit($this->_conn, true);
 		
 		return $result;
 	}
@@ -428,7 +430,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		
 		$operator = $this->_processWhereOperator($where->getOperator());
 		
-		return $left . $operator . $right;
+		return $left . ' ' . $operator . ' ' . $right;
 	}
 	
 	protected function _processWhereValue($value, SimDAL_Query_Where_Interface $where) {
@@ -460,7 +462,9 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	}
 	
 	protected function _processWhereArray(array $value) {
+		$value = '(\'' . implode('\',\'', $value) . '\')';
 		
+		return $value;
 	}
 	
 	protected function _processWhereOperator($operator) {

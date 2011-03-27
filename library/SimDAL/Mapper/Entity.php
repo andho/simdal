@@ -164,6 +164,10 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	public function getAssociations() {
 		return $this->_associations;
 	}
+	
+	public function getAssociation($identifier) {
+		return $this->_associations[$identifier];
+	}
 
 	public function hasDescendents() {
 		return count($this->_descendents) > 0;
@@ -233,9 +237,13 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		foreach ($this->_columnsRawData as $property=>$column_data) {
 			$extra_params = isset($column_data[2])?$column_data[2]:null;
 			if (!is_null($extra_params)) {
-				$pk = isset($column_data[2]['pk'])?$column_data[2]['pk']:null;
-				$autoIncrement = isset($column_data[2]['autoIncrement'])?$column_data[2]['autoIncrement']:null;
+				$pk = isset($column_data[2]['pk'])?$column_data[2]['pk']:false;
+				$autoIncrement = isset($column_data[2]['autoIncrement'])?$column_data[2]['autoIncrement']:false;
 				$alias = isset($column_data[2]['alias'])?$column_data[2]['alias']:null;
+			} else {
+				$pk = false;
+				$autoIncrement = false;
+				$alias = null;
 			}
 			$this->_columns[$property] = new SimDAL_Mapper_Column($this, $property, $column_data[0], $column_data[1], $pk, $autoIncrement, $alias);
 			if (array_key_exists(2, $column_data)) {

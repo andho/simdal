@@ -177,7 +177,7 @@ class SimDAL_Persistence_SqLite3Adapter extends SimDAL_Persistence_AdapterAbstra
 	public function escape($value, $type=null) {
 		$this->_connect();
 		
-		return $this->_sqlite->escapeString($value);
+		return $value;
 	}
 	
 	protected function _whereRange($key, $values) {

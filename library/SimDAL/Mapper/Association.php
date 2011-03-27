@@ -170,4 +170,16 @@ class SimDAL_Mapper_Association {
 		return false;
 	}
 	
+	public function isOneToMany() {
+		return $this->_type == 'one-to-many';
+	}
+	
+	public function isManyToOne() {
+		return $this->_type == 'many-to-many';
+	}
+	
+	public function isOneToOne() {
+		return $this->_type == 'one-to-one';
+	}
+	
 }

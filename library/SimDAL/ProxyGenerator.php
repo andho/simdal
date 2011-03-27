@@ -65,6 +65,13 @@ class SimDAL_ProxyGenerator {
 		$class .= $proxy_methods;
 		$class .= '}' . PHP_EOL . PHP_EOL;
 		
+		$dirname = dirname($proxy_file);
+		if (!is_dir($dirname)) {
+			if (!mkdir($dirname, 0775, true)) {
+				throw new Exception('Could not create directory for Proxy file');
+			}
+		}
+		
 		if (!is_file($proxy_file)) {
 			touch($proxy_file);
 		}
@@ -85,7 +92,7 @@ class SimDAL_ProxyGenerator {
 				
 				$proxy_class_filename = str_replace('_', '/', $class_name);
 				$descendent_filename = str_replace('_', '/', $prefix . $descendent->getClass());
-				$descendent_proxy_file = preg_replace('/'.$proxy_class_filename.'/', $descendent_filename, $proxy_file);
+				$descendent_proxy_file = preg_replace('/'.preg_quote($proxy_class_filename, '/').'/', $descendent_filename, $proxy_file);
 				$dirname = dirname($descendent_proxy_file);
 				
 				if (!is_dir($dirname)) {
@@ -154,6 +161,9 @@ class SimDAL_ProxyGenerator {
 		$output .= '		} else if (is_object($data)) {' . PHP_EOL;
 		
 		foreach ($mapping->getColumns() as $columnName=>$column) {
+			if ($column->isAutoIncrement()) {
+				continue;
+			}
 			$output .= '			if (method_exists($data, \'get' . $columnName . '\')) {' . PHP_EOL;
 			$output .= '				$this->' . $columnName . ' = $data->get' . $columnName . '();' . PHP_EOL;
 			$output .= '			}' . PHP_EOL;
@@ -165,36 +175,55 @@ class SimDAL_ProxyGenerator {
 			$property = $association->getProperty();
 			$setter = 'set' . $method;
 			$getter = 'get' . $method;
+			$foreignKey = $association->getForeignKey();
+			$parentKey = $association->getParentKey();
+			$parentKeyGetter = 'get' . ucfirst($parentKey);
 			$output .= '			if (method_exists($data, \'' . $getter . '\')) {' . PHP_EOL;
+			$output .= '				$reference = $data->' . $getter . '();' . PHP_EOL;
 			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
-				$output .= '				$this->' . $setter . '($data->' . $getter . '());' . PHP_EOL;
-			} else if ($association->getType() == 'one-to-many') {
-				$output .= '				$this->' . $property . ' = $data->' . $getter . '();' . PHP_EOL;
+				$output .= '				if (!is_null($reference) && !$this->_getSession()->isLoaded($reference) && !$this->_getSession()->isAdded($reference)) {' . PHP_EOL;
+				$output .= '					$this->_getSession()->addEntity($reference);' . PHP_EOL;
+				$output .= '				}' . PHP_EOL;
 			}
+			if ($association->getType() == 'many-to-one' || ($association->getType() == 'one-to-one' && $association->isDependent())) {
+				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
+				$output .= '				$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
+			} else if ($association->getType() == 'one-to-many') {
+				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
+			}
+			$output .= '				$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 			$output .= '			}' . PHP_EOL;
 		}
 		
 		$output .= '		}' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
 		$output .= '	private function _isSimDALAssociationLoaded($association_name) {' . PHP_EOL;
 		$output .= '		if (!array_key_exists($association_name, $this->_loadedSimDALEntities)) {' . PHP_EOL;
 		$output .= '			throw new Exception(__METHOD__ . \' called with invalid association name\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return $this->_loadedSimDALEntities[$association_name];' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
-		$output .= '	private function _simDALAssociationIsLoaded($association_name) {' . PHP_EOL;
+		
+		$output .= '	private function _SimDALAssociationIsLoaded($association_name) {' . PHP_EOL;
 		$output .= '		if (!array_key_exists($association_name, $this->_loadedSimDALEntities)) {' . PHP_EOL;
 		$output .= '			throw new Exception(__METHOD__ . \' called with invalid association name\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		$this->_loadedSimDALEntities[$association_name] = true;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
 		$output .= '	private function _getSession() {' . PHP_EOL;
 		$output .= '		return $this->_session;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
-		$output .= '	public function _SimDAL_setPrimaryKey($values) {' . PHP_EOL;
+		
+		$output .= '	public function _SimDAL_setPrimaryKey($values, $session) {' . PHP_EOL;
 		$primary_key = $mapping->getPrimaryKey();
+		$output .= '		if ($session !== $this->_getSession()) {' . PHP_EOL;
+		$output .= '			throw new Exception(__METHOD__ . \' called from outside of library scope\');' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
 		$output .= '		$this->' . $primary_key . ' = $values;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
 		$output .= '	public function _SimDAL_diff($data) {' . PHP_EOL;
 		$output .= '		$output = array();' . PHP_EOL;
 		$output .= '		foreach ($this as $key=>$value) {' . PHP_EOL;
@@ -209,6 +238,23 @@ class SimDAL_ProxyGenerator {
 		$output .= '			}' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return $output;' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
+		$output .= '	public function _SimDAL_GetAssociation($identifier) {' . PHP_EOL;
+		$output .= '		$mapping = $this->_getSession()->getMapper()->getMappingForEntityClass(get_class($this));' . PHP_EOL;
+		$output .= '		return $mapping->getAssociation($identifier);' . PHP_EOL;
+		$output .= '	}' . PHP_EOL;
+		
+		$output .= '	public function _SimDAL_SetReference($entity, $otherside_association) {' . PHP_EOL;
+		$output .= '		$association = $otherside_association->getMatchingAssociationFromAssociationClass();' . PHP_EOL;
+		$output .= '		$method = $association->getMethod();' . PHP_EOL;
+		$output .= '		if ($association->isOneToMany()) {' . PHP_EOL;
+		$output .= '			$getter = \'get\' . ucfirst($method);' . PHP_EOL;
+		$output .= '			$this->$getter()->add($entity);' . PHP_EOL;
+		$output .= '		} else {' . PHP_EOL;
+		$output .= '			$setter = \'set\' . ucfirst($method);' . PHP_EOL;
+		$output .= '			$this->$setter($entity);' . PHP_EOL;
+		$output .= '		}' . PHP_EOL; 
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;
@@ -282,20 +328,26 @@ class SimDAL_ProxyGenerator {
 			$output .= '                            ->fetch()' . PHP_EOL;
 			$output .= '                    );' . PHP_EOL;
 		}
-		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+		$output .= '			$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
+		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null, $set_circlic_ref=true) {' . PHP_EOL;
+		$output .= '		if (!is_null($value)) {' . PHP_EOL;
 		if ($association->isDependent()) {
-			$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
-			$output .= '		if (!is_null($value)) {' . PHP_EOL;
 			$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
-			$output .= '		}' . PHP_EOL;
-			$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
-			$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
-			$output .= '	}' . PHP_EOL . PHP_EOL;
 		}
+		$output .= '			if (!$this->_getSession()->isLoaded($value) && !$this->_getSession()->isAdded($value)) {' . PHP_EOL;
+		$output .= '				$this->_getSession()->addEntity($value);' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		$output .= '		$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+		$output .= '		parent::' . $setter . '($value);' . PHP_EOL . PHP_EOL;
+		$output .= '		if (!is_null($value) && $set_circlic_ref) {' . PHP_EOL;
+		$output .= '			$value->_SimDAL_SetReference($this, $this->_SimDAL_GetAssociation(\'' . $association->getIdentifier() . '\'));' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;
 	}
@@ -315,17 +367,23 @@ class SimDAL_ProxyGenerator {
 		$output .= '				->equals($this->get' . ucfirst($association->getForeignKey()) . '())' . PHP_EOL;
 		$output .= '				->fetch()' . PHP_EOL;
 		$output .= '			);' . PHP_EOL;
-		$output .= '			$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+		$output .= '			$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
 		$output .= '		return parent::' . $getter . '();' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
-		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null) {' . PHP_EOL;
+		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null, $set_circlic_ref=true) {' . PHP_EOL;
 		$output .= '		if (!is_null($value)) {' . PHP_EOL;
 		$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
+		$output .= '			if (!$this->_getSession()->isLoaded($value) && !$this->_getSession()->isAdded($value)) {' . PHP_EOL;
+		$output .= '				$this->_getSession()->addEntity($value);' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
-		$output .= '		$this->_simDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
-		$output .= '		parent::' . $setter . '($value);' . PHP_EOL;
+		$output .= '		$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
+		$output .= '		parent::' . $setter . '($value);' . PHP_EOL . PHP_EOL;
+		$output .= '		if (!is_null($value) && $set_circlic_ref) {' . PHP_EOL;
+		$output .= '			$value->_simDAL_SetReference($this, $this->_SimDAL_GetAssociation(\'' . $association->getIdentifier() . '\'));' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		return $output;

@@ -37,6 +37,8 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected $_updates = array();
 	protected $_deletes = array();
 	
+	protected $_mockQueries = array();
+	
 	static public function setDefaultMapper($mapper) {
 		if (!$mapper instanceof SimDAL_Mapper) {
 			return false;
@@ -57,6 +59,10 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		if ($session instanceof SimDAL_Session) {
 			$this->_session = $session;
 		}
+	}
+	
+	public function __destruct() {
+		
 	}
 	
 	/**
@@ -85,14 +91,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		$class = $this->_getMapper()->getClassFromEntity($entity);
 		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		
-		$row = $this->_arrayForStorageFromEntity($mapping, $entity, false, true);
+		$row = $this->_arrayForStorageFromEntity($mapping, $entity, true, true);
 		$sql = $this->_processInsertQuery($mapping, $row);
 		if (($result = $this->execute($sql)) === false) {
 			throw new SimDAL_Persistence_AdapterException($this, $this->getAdapterError() . ' for entity ' . get_class($entity));
 		}
 		$id = $this->lastInsertId();
 		
-		$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+		/*$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		if ($mapping->hasDescendents()) {
 			$descendent = $mapping->getDescendentMappingFromEntity($entity);
 			if (!is_null($descendent)) {
@@ -102,7 +108,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 					throw new Exception($this->getAdapterError());
 				}
 			}
-		}
+		}*/
 		
 		return $id;
 	}
@@ -161,7 +167,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	}
 	
 	protected function _processUpdateQuery(SimDAL_Mapper_Entity $mapping, $data, $id) {
-		$pk = $mapping->getPrimaryKey();
+		$pk = $mapping->getPrimaryKeyColumn()->getColumn();
 		
 		$sql = "UPDATE ".$this->_quoteIdentifier($mapping->getTable())." SET ";
 		
@@ -457,7 +463,14 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $this->_returnResultRow($sql);
 	}
 	
-	public function returnQueryAsRows($sql, $class) {
+	public function returnQueryAsRows($sql) {
+		if ($this->_isMockQueriesSet()) {
+			$result = $this->_fetchMockResult(md5($sql));
+			if ($result !== false) {
+				return $result;
+			}
+		}
+		
 		return $this->_returnResultRowsAsArray($sql);
 	}
 	
@@ -604,6 +617,22 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 		
 		return $array;
+	}
+	
+	public function setMockQuery($sql, $result) {
+		$hash = md5($sql);
+		$this->_mockQueries[$hash]['result'] = $result;
+	}
+	
+	protected function _isMockQueriesSet() {
+		return count($this->_mockQueries) > 0;
+	}
+	
+	protected function _fetchMockResult($hash) {
+		if (!isset($this->_mockQueries[$hash])) {
+			return false;
+		}
+		return $this->_mockQueries[$hash]['result'];
 	}
 	
 	abstract public function execute($sql);

@@ -80,6 +80,14 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$adapter_class = $this->_adapter;
 		
 		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
+		
+		$this->startTransaction();
+	}
+	
+	public function __destruct() {
+		$this->rollback();
+		$this->_adapter = null;
+		$this->_mapper = null;
 	}
 	
 	public function startTransaction() {
@@ -90,12 +98,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	public function rollback() {
-		$this->_lockRows = false;
-		$this->getAdapter()->rollbackTransaction();
+		if ($this->_lockRows === true) {
+			$this->getAdapter()->rollbackTransaction();
+		}
 	}
 	
 	public function addEntity(&$entity) {
 		if ($this->isLoaded($entity)) {
+			return false;
+		}
+		
+		$class = get_class($entity);
+		if (preg_match('/SimDALProxy$/', $class)) {
 			return false;
 		}
 		
@@ -113,22 +127,19 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			return false;
 		}
 		
-		$pkColumn = $entityMapper->getPrimaryKeyColumn();
-		$id = null;
-		if ($pkColumn->isAutoIncrement()) {
-			$pk = $pkColumn->getProperty();
-			$id = 'autoincrement' . $this->_newKey;
-		}
-		
 		$proxyClass = $class . 'SimDALProxy';
-		$proxy = new $proxyClass($entity, $this, $id);
+		$proxy = new $proxyClass($entity, $this);
 		$entity = $proxy;
 		
-		$this->_new[$domain_entity_name][] = $entity;
+		$pkColumn = $entityMapper->getPrimaryKeyColumn();
+		$id = $this->getAdapter()->insertEntity($entity);
+		if (!$pkColumn->isAutoIncrement()) {
+			$id = null;
+		}
 		
-		$this->_newKey++;
+		$entity->_SimDAL_setPrimaryKey($id, $this);
 		
-		return true;
+		$this->updateEntity($entity);
 	}
 	
 	public function updateEntity($entity) {
@@ -158,7 +169,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	public function commit($soft=false) {
-		$this->_resolveDependencies();
+		//$this->_resolveDependencies();
 		
 		$classes = $this->_getUsedClasses();
 		$priority = $this->_getCommitPriority($classes);
@@ -172,14 +183,14 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$error = false;
 		try {
 			foreach ($priority as $class) {
-				if ($this->_hasDeletesFor($class) && !$this->_commitDeletesFor($class)) {
+				/*if ($this->_hasDeletesFor($class) && !$this->_commitDeletesFor($class)) {
 					$error = true;
 				}
 				
 				if ($this->_hasInsertsFor($class) && !$this->_commitInsertsFor($class)) {
 					$error = true;
 					break;
-				}
+				}*/
 				
 				if ($this->_hasUpdatesFor($class) && !$this->_commitUpdatesFor($class)) {
 					$error = true;
@@ -197,7 +208,6 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		if (!$soft) {
 			$this->getAdapter()->commitTransaction();
-			$this->_lockRows = false;
 		}
 		
 		return true;
@@ -426,7 +436,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$mapping = $this->getMapper()->getMappingForEntityClass($class);
 			$pk = $mapping->getPrimaryKey();
 			
-			$entity->_SimDAL_setPrimaryKey($id);
+			$entity->_SimDAL_setPrimaryKey($id, $this);
 			$this->_distributeParentKeysOfNewEntityToForeignKeysOfDependents($entity);
 			$this->_processInsertHooks($entity);
 			$this->updateEntity($entity);

@@ -27,19 +27,54 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	protected $_association = null;
 	protected $_populated = false;
 	protected $_parent = null;
+	protected $_new = array();
 	
 	public function rewind() {
 		$this->_loadAll();
 		parent::rewind();
 	}
 	
-	public function count(SimDAL_Query $count = null) {
-		if (is_null($count)) {
-			$count = $this->_getQuery();
+	public function count(SimDAL_Query $query = null) {
+		if (is_null($query)) {
+			$query = $this->_getQuery();
 		}
 		$this->_query = null;
-		$count = $this->_getSession()->count($count);
-		return $count['count'];
+		
+		$loaded_count = $this->_countLoadedEntities($query);
+		
+		// exclude loaded entities from query
+		$mapping = $this->_getAssociation()->getMapping();
+		$pk = $mapping->getPrimaryKey();
+		$pk_getter = 'get' . ucfirst($pk);
+		$keys = array();
+		foreach ($this->_data as $loaded) {
+			$keys[] = $loaded->$pk_getter();
+		}
+		$query->whereColumn($pk)->isNotIn($keys);
+		
+		$count = $this->_getSession()->count($query);
+		return $count['count'] + $loaded_count;
+	}
+	
+	protected function _countLoadedEntities(SimDAL_Query $query) {
+		$count = 0;
+		foreach ($this->_data as $loaded) {
+			/* @var $where SimDAL_Query_Where */
+			foreach ($query->getWheres() as $where) {
+				if (!$where instanceof SimDAL_Query_Where_Column) {
+					throw new Exception('Only column where are implemented for counting');
+				}
+				$column = $where->getLeftValue();
+				$getter = 'get' . ucfirst($column->getProperty());
+				$value = $where->getRightValue();
+				if ($loaded->$getter() != $value) {
+					continue 2;
+				}
+			}
+		
+			$count++;
+		}
+		return $count;
 	}
 	
 	/**
@@ -61,7 +96,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		 * @todo find a way to load data when needed and not when adding an Entity
 		 */
 		if ($load) {
-			$this->_loadAll();
+			//$this->_loadAll();
 		} 
 		
 		$class = $this->_getAssociation()->getClass();
@@ -69,12 +104,17 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			throw new Exception('Object of invalid class has been passed');
 		}
 		
+		$otherside_association = $this->_getAssociation()->getMatchingAssociationFromAssociationClass();
+		$method = 'set' . $otherside_association->getMethod();
+		$entity->$method($this->_getParent(), false);
+		
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
 		$primaryKey_getter = 'get' . $primaryKey;
 		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey_getter()) && !$this->_getSession()->isAdded($entity)) {
 			$this->_getSession()->addEntity($entity);
 		}
 		$this[$entity->$primaryKey_getter()] = $entity;
+		$this->_new[] = $entity;
 	}
 	
 	public function delete(&$entity) {
