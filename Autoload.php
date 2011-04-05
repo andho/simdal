@@ -27,15 +27,16 @@ class SimDAL_Autoload {
 	protected static $_mappers = array();
 	
 	public static function setDomainDirectory($dir) {
-		if (!is_dir($dir)) {
-			throw new Exception($dir . ' is not a valid directory');
+		$simdal_dir = $dir . DIRECTORY_SEPARATOR . '.simdal';
+		if (!is_dir($simdal_dir)) {
+			throw new Exception($simdal_dir . ' is not a valid directory');
 		}
 		$real_path = realpath($dir);
-		if (!is_readable($dir)) {
-			throw new Exception($dir . ' is not readable');
+		if (!is_readable($simdal_dir)) {
+			throw new Exception($simdal_dir . ' is not readable');
 		}
-		if (!is_writable($dir)) {
-			throw new Exception($dir . ' is not writable');
+		if (!is_writable($simdal_dir)) {
+			throw new Exception($simdal_dir . ' is not writable');
 		}
 		
 		self::$_domainDir = $real_path;
