@@ -37,6 +37,9 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	public function count(SimDAL_Query $query = null) {
 		if (is_null($query)) {
 			$query = $this->_getQuery();
+			if ($query === false) {
+				return 0;
+			}
 		}
 		$this->_query = null;
 		
