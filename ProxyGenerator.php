@@ -187,7 +187,9 @@ class SimDAL_ProxyGenerator {
 			}
 			if ($association->getType() == 'many-to-one' || ($association->getType() == 'one-to-one' && $association->isDependent())) {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
-				$output .= '				$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
+				$output .= '				if (!is_null($reference)) {' . PHP_EOL;
+				$output .= '					$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
+				$output .= '				}' . PHP_EOL;
 			} else if ($association->getType() == 'one-to-many') {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
 			}
