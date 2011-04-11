@@ -160,12 +160,16 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	public function deleteEntity($entity) {
-			$class = $this->getMapper()->getClassFromEntity($entity);
+		$class = $this->getMapper()->getClassFromEntity($entity);
 		$entityMapping = $this->getMapper()->getMappingForEntityClass($class);
 		$primaryKey = $entityMapping->getPrimaryKey();
 		$pk_getter = 'get' . $primaryKey;
 		
-		$this->_delete[$class][$entity->$pk_getter()] = $entity;
+		if (isset($this->_modified[$class]) && isset($this->_modified[$class][$entity->$pk_getter()])) {
+			unset($this->_modified[$class][$entity->$pk_getter()]);
+		}
+		
+		$this->delete($class)->whereIdIs($entity->$pk_getter())->execute();
 	}
 	
 	public function commit($soft=false) {
@@ -325,7 +329,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function delete($class) {
-		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_DELETE);
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_DELETE, $this->getMapper());
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
