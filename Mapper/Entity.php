@@ -201,14 +201,15 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	  if (empty($type_field) || $type_field == '') {
 	  	return $this->getClass();
 	  }
-	  if (!isset($row[$type_field])) {
+	  $column = $this->getColumn($type_field)->getColumn();
+	  if (!isset($row[$column])) {
 	  	throw new Exception('\''.$type_field.'\' not defined in descendent');
 	  }
 	  $prefix = $this->getDescendentPrefix();
-	  $class = $prefix . ucfirst($row[$type_field]);
+	  $class = preg_replace('/ /', '', ucwords(strtolower($row[$column])));
 	  
 	  if (isset($this->_descendents[$class])) {
-	    return $class;
+	    return $prefix . $class;
 	  }
 	  
 	  return $this->getClass();
