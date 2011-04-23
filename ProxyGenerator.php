@@ -255,7 +255,10 @@ class SimDAL_ProxyGenerator {
 		$output .= '			$this->$getter()->add($entity);' . PHP_EOL;
 		$output .= '		} else {' . PHP_EOL;
 		$output .= '			$setter = \'set\' . ucfirst($method);' . PHP_EOL;
-		$output .= '			$this->$setter($entity);' . PHP_EOL;
+		$output .= '			$property = $association->getProperty();' . PHP_EOL;
+		$output .= '			if ($this->$property !== $entity) {' . PHP_EOL;
+		$output .= '				$this->$setter($entity);' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
 		$output .= '		}' . PHP_EOL; 
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
@@ -338,7 +341,7 @@ class SimDAL_ProxyGenerator {
 		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null, $set_circlic_ref=true) {' . PHP_EOL;
 		$output .= '		if (!is_null($value)) {' . PHP_EOL;
 		if ($association->isDependent()) {
-			$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
+			$output .= '			$this->' . $association->getForeignKey() . ' = $value->get' . ucfirst($association->getParentKey()) . '();' . PHP_EOL;
 		}
 		$output .= '			if (!$this->_getSession()->isLoaded($value) && !$this->_getSession()->isAdded($value)) {' . PHP_EOL;
 		$output .= '				$this->_getSession()->addEntity($value);' . PHP_EOL;
@@ -376,7 +379,7 @@ class SimDAL_ProxyGenerator {
 		
 		$output .= '	public function ' . $setter . '(' . $association->getClass() . ' $value=null, $set_circlic_ref=true) {' . PHP_EOL;
 		$output .= '		if (!is_null($value)) {' . PHP_EOL;
-		$output .= '			$this->set' . ucfirst($association->getForeignKey()) . '($value->get' . ucfirst($association->getParentKey()) . '());' . PHP_EOL;
+		$output .= '			$this->' . $association->getForeignKey() . ' = $value->get' . ucfirst($association->getParentKey()) . '();' . PHP_EOL;
 		$output .= '			if (!$this->_getSession()->isLoaded($value) && !$this->_getSession()->isAdded($value)) {' . PHP_EOL;
 		$output .= '				$this->_getSession()->addEntity($value);' . PHP_EOL;
 		$output .= '			}' . PHP_EOL;
