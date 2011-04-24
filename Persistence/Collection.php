@@ -145,7 +145,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 				$this->_populated = true;
 				return false;
 			}
-			$collection = $this->_getSession()->fetch($query, 0);
+			$collection = $this->_getSession()->fetch(0, null, $query);
 			parent::__construct($collection);
 			$this->_populated = true;
 			$this->_query = null;
@@ -237,10 +237,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	
 	public function getFirst() {
 		$query = $this->_getQuery();
-		return $this->fetch($query);
+		return $this->fetch(null, null, $query);
 	}
 	
-	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
+	public function fetch($limit=null, $offset=null, SimDAL_Query $query=null) {
 		if (is_null($query)) {
 			$query = $this->_getQuery();
 		}
@@ -248,7 +248,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 			$limit = 0;
 		}
 		$this->_query = null;
-		return $this->_getSession()->fetch($query, $limit, $offset);
+		return $this->_getSession()->fetch($limit, $offset, $query);
 	}
 	
 	public function execute(SimDAL_Query $query) {

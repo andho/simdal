@@ -258,7 +258,7 @@ class SimDAL_Query {
 	
 	public function fetch($limit=null, $offset=null) {
 		if (method_exists($this->_parent, 'fetch')) {
-			return $this->_parent->fetch($this, $limit, $offset);
+			return $this->_parent->fetch($limit, $offset, $this);
 		}
 		
 		return false;

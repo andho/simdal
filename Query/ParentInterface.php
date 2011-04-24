@@ -23,7 +23,7 @@
 
 interface SimDAL_Query_ParentInterface {
 	
-	public function fetch(SimDAL_Query $query,  $limit=null,  $offset=null);
+	public function fetch($limit=null,  $offset=null, SimDAL_Query $query);
 	
 	public function execute(SimDAL_Query $query);
 	

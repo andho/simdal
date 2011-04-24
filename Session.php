@@ -237,7 +237,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		return $this->getAdapter()->returnQueryResultAsArray($query);
 	}
 	
-	public function fetch(SimDAL_Query $query, $limit=null, $offset=null) {
+	public function fetch($limit=null, $offset=null, SimDAL_Query $query=null) {
+		if (is_null($query)) {
+			throw new SimDAL_Exception('You cannot call Session::fetch without a query');
+		}
 		if (is_null($offset)) {
 			$offset = 0;
 		}
