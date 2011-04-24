@@ -104,7 +104,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	public function addEntity(&$entity) {
-		if ($this->isLoaded($entity)) {
+		if ($this->isLoaded($entity) || $this->isAdded($entity)) {
 			return false;
 		}
 		
@@ -140,6 +140,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$entity->_SimDAL_setPrimaryKey($id, $this);
 		
 		$this->updateEntity($entity);
+		
+		$this->_persistPureDependents($entity);
 	}
 	
 	public function updateEntity($entity) {
@@ -219,6 +221,52 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	
 	public function softCommit() {
 		return $this->commit(true);
+	}
+	
+	protected function _persistPureDependents($entity) {
+		$class = $this->getMapper()->getClassFromEntity($entity);
+		$mapping = $this->getMapper()->getMappingForEntityClass($class);
+		
+		/* var $association SimDAL_Mapper_Association */
+		foreach ($mapping->getAssociations() as $association) {
+			if ($association->isDependent()) {
+				continue;
+			}
+			
+			$method = $association->getMethod();
+			$getter = 'get' . $method;
+			$reference = $entity->$getter();
+			
+			if (is_null($reference)) {
+				continue;
+			}
+			
+			$otherside_association = $association->getMatchingAssociationFromAssociationClass();
+			$method = $otherside_association->getMethod();
+			$setter = 'set' . $method;
+			
+			if ($reference instanceof SimDAL_Persistence_Collection) {
+				foreach ($reference as $ref) {
+					$reflection = new ReflectionObject($ref);
+					$ref_method = $reflection->getMethod($setter);
+					if ($ref_method->isPublic()) {
+						$ref->$setter($entity);
+					}
+					if (!$this->isLoaded($ref) && !$this->isAdded($ref)) {
+						$this->addEntity($ref);
+					}
+				}
+			} else {
+				$reflection = new ReflectionObject($reference);
+				$ref_method = $reflection->getMethod($setter);
+				if ($ref_method->isPublic()) {
+					$reference->$setter($entity);
+				}
+				if (!$this->isLoaded($reference) && !$this->isAdded($reference)) {
+					$this->addEntity($reference);
+				}
+			}
+		}
 	}
 
 	/**

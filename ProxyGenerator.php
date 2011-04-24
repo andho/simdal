@@ -180,16 +180,18 @@ class SimDAL_ProxyGenerator {
 			$parentKeyGetter = 'get' . ucfirst($parentKey);
 			$output .= '			if (method_exists($data, \'' . $getter . '\')) {' . PHP_EOL;
 			$output .= '				$reference = $data->' . $getter . '();' . PHP_EOL;
-			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
+			if ($association->getType() == 'many-to-one' || ($association->getType() == 'one-to-one' && $association->isDependent())) {
 				$output .= '				if (!is_null($reference) && !$this->_getSession()->isLoaded($reference) && !$this->_getSession()->isAdded($reference)) {' . PHP_EOL;
 				$output .= '					$this->_getSession()->addEntity($reference);' . PHP_EOL;
 				$output .= '				}' . PHP_EOL;
 			}
-			if ($association->getType() == 'many-to-one' || ($association->getType() == 'one-to-one' && $association->isDependent())) {
+			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
-				$output .= '				if (!is_null($reference)) {' . PHP_EOL;
-				$output .= '					$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
-				$output .= '				}' . PHP_EOL;
+				if ($association->isDependent()) {
+					$output .= '				if (!is_null($reference)) {' . PHP_EOL;
+					$output .= '					$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
+					$output .= '				}' . PHP_EOL;
+				}
 			} else if ($association->getType() == 'one-to-many') {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
 			}
