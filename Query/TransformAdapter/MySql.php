@@ -1,20 +1,30 @@
 <?php
 
-class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapter_Abstract {
+class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapter_Interface {
+	
+	private $_adapter;
+	
+	public function __construct(SimDAL_Persistence_AdapterAbstract $adapter) {
+		$this->_adapter = $adapter;
+	}
+	
+	private function _getAdapter() {
+		return $this->_adapter;
+	}
 	
 	public function queryToString(SimDAL_Query $query) {
 		$wheres = array();
 		foreach ($query->getWheres() as $where) {
-			$wheres[] = $this->_processWhere($where);
+			$wheres[] = $this->processWhere($where);
 		}
 		
-		$limit = $this->_processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
+		$limit = $this->processQueryLimit($query->getLimit()->getLimit(), $query->getLimit()->getOffset(), $query);
 		
 		$columns = null;
 		if ($query->getType() == SimDAL_Query::TYPE_SELECT) {
-			$columns = $this->_processQueryPrimaryTableColumns($query);
+			$columns = $this->processQueryPrimaryTableColumns($query);
 		}
-		$joins = $this->_processQueryJoins($query, $columns);
+		$joins = $this->processQueryJoins($query, $columns);
 		
 		$from = $query->getFrom();
 		$schema = $query->getSchema();
@@ -36,7 +46,7 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 			case SimDAL_Query::TYPE_UPDATE:
 				$sql = 'UPDATE ' . $from;
 				$sql .= $joins;
-				$sets = $this->_processWhereSets($query);
+				$sets = $this->processWhereSets($query);
 				$sql .= ' SET ' . implode(', ', $sets);
 		}
 		
@@ -45,7 +55,7 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 		}
 		
 		if ($query->getOrderBy() !== null) {
-			$sql .= ' ' . $this->_processOrderBy($query->getOrderBy(), $query);
+			$sql .= ' ' . $this->processOrderBy($query->getOrderBy(), $query);
 		}
 		
 		$sql .= ' ' . $limit;
@@ -53,7 +63,7 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 		return $sql;
 	}
 	
-	protected function _processQueryPrimaryTableColumns($query) {
+	public function processQueryPrimaryTableColumns($query) {
 	    $columns = array();
 	    $columns_array = $query->getColumns();
 	    if (!$query->hasAliases() && count($columns_array) <= 0) {
@@ -82,13 +92,13 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 	    return $columns;
 	}
 	
-	protected function _processQueryJoins($query, &$columns=null) {
+	public function processQueryJoins($query, &$columns=null) {
 		/* @var $join SimDAL_Query_Join_Descendent */
 	    $joins = '';
 		foreach ($query->getJoins() as $join) {
 			$joins .= ' ' . $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
 			foreach ($join->getWheres() as $where) {
-				$method = '_process' . $where->getProcessMethod();
+				$method = 'process' . $where->getProcessMethod();
 				$joins .= $this->$method($where);
 			}
 			$columns_array = $join->getColumns();
@@ -112,29 +122,29 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 		return $joins;
 	}
 	
-	protected function _processWhere(SimDAL_Query_Where_Interface $where) {
+	public function processWhere(SimDAL_Query_Where_Interface $where) {
 		if ($where instanceof SimDAL_Query_Where_Collection) {
 			//@todo do whatever is needed
 		}
-		$left = $this->_processWhereValue($where->getLeftValue(), $where);
-		$right = $this->_processWhereValue($where->getRightValue(), $where);
+		$left = $this->processWhereValue($where->getLeftValue(), $where);
+		$right = $this->processWhereValue($where->getRightValue(), $where);
 		
-		$operator = $this->_processWhereOperator($where->getOperator());
+		$operator = $this->processWhereOperator($where->getOperator());
 		
 		return $left . ' ' . $operator . ' ' . $right;
 	}
 	
-	protected function _processWhereSets(SimDAL_Query $query) {
+	public function processWhereSets(SimDAL_Query $query) {
 		$sets = array();
 		
 		/* @var $set SimDAL_Query_Set */
 		foreach ($query->getSets() as $set) {
 			$column = $set->getColumn();
 			$value = $set->getValue();
-			$set = $this->_processWhereColumn($column->getTable(), $column->getColumn());
+			$set = $this->processWhereColumn($column->getTable(), $column->getColumn());
 			$set .= ' = ';
 			if ($value instanceof SimDAL_Mapper_Entity) {
-				$set .= $this->_processWhereColumn($value->getTable(), $value->getColumn());
+				$set .= $this->processWhereColumn($value->getTable(), $value->getColumn());
 			} else {
 				$set .= $this->_transformData($column, $value, $column->getEntity());
 			}
@@ -145,44 +155,44 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 		return $sets;
 	}
 	
-	protected function _processWhereValue($value, SimDAL_Query_Where_Interface $where) {
+	public function processWhereValue($value, SimDAL_Query_Where_Interface $where) {
 		if (is_object($value)) {
 			$class = get_class($value);
 			switch ($class) {
-				case 'SimDAL_Mapper_Column': return $this->_processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
-				case 'SimDAL_Query_Where_Value_Range': return $this->_processWhereRange($value); break;
+				case 'SimDAL_Mapper_Column': return $this->processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
+				case 'SimDAL_Query_Where_Value_Range': return $this->processWhereRange($value); break;
 			}
 		} else if (is_array($value)) {
-			return $this->_processWhereArray($value);
+			return $this->processWhereArray($value);
 		} else if (is_null($value)) {
 			return 'NULL';
 		} else {
-			return "'" . $this->escape($value) . "'";
+			return "'" . $this->_getAdapter()->escape($value) . "'";
 		}
 	}
 	
-	protected function _processWhereColumn($table, $column, $where=null) {
-		return $this->_quoteIdentifier($table) . '.' . $this->_quoteIdentifier($column);
+	public function processWhereColumn($table, $column, $where=null) {
+		return $this->_getAdapter()->quoteIdentifier($table) . '.' . $this->_getAdapter()->quoteIdentifier($column);
 	}
 	
-	protected function _processWhereRange(SimDAL_Query_Where_Value_Range $range) {
-		$value1 = $this->_processWhereValue($range->getValue1());
-		$value2 = $this->_processWhereValue($range->getValue2());
+	public function processWhereRange(SimDAL_Query_Where_Value_Range $range) {
+		$value1 = $this->processWhereValue($range->getValue1());
+		$value2 = $this->processWhereValue($range->getValue2());
 		
 		return $value1 . ' AND ' . $value2;
 	}
 	
-	protected function _processWhereArray(array $value) {
+	public function processWhereArray(array $value) {
 		$value = '(\'' . implode('\',\'', $value) . '\')';
 		
 		return $value;
 	}
 	
-	protected function _processWhereOperator($operator) {
+	public function processWhereOperator($operator) {
 		return $operator;
 	}
 	
-	protected function _processQueryLimit($limit, $offset, SimDAL_Query $query) {
+	public function processQueryLimit($limit, $offset, SimDAL_Query $query) {
 		$output = '';
 		if (is_numeric($limit)) {
 			$output = $limit;
@@ -196,12 +206,12 @@ class SimDAL_Query_TransformAdapter_Mysql implements SimDAL_Query_TransformAdapt
 		return $output;
 	}
 	
-	protected function _processOrderBy(SimDAL_Query_OrderBy $order_by, SimDAL_Query $query) {
+	public function processOrderBy(SimDAL_Query_OrderBy $order_by, SimDAL_Query $query) {
 		$output = ' ORDER BY ';
 		$column = $order_by->getValue();
 		$type = $order_by->getType();
 		
-		$output .= $this->_processWhereColumn($column->getTable(), $column->getColumn()) . ' ';
+		$output .= $this->processWhereColumn($column->getTable(), $column->getColumn()) . ' ';
 		switch ($type) {
 			case 'descending': $output .= 'DESC'; break;
 			default: $output .= 'ASC'; break;

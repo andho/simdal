@@ -636,11 +636,11 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	
 	abstract public function escape($value);
 	
+	abstract public function quoteIdentifier($column);
+	
 	abstract protected function _returnResultRow($sql, $class=null);
 	
 	abstract protected function _returnResultRows($sql, $class);
-	
-	abstract protected function _quoteIdentifier($column);
 	
 	abstract protected function _queryToString(SimDAL_Query $query);
 	
