@@ -68,7 +68,7 @@ class SimDAL_ProxyGenerator {
 		$dirname = dirname($proxy_file);
 		if (!is_dir($dirname)) {
 			if (!mkdir($dirname, 0775, true)) {
-				throw new Exception('Could not create directory for Proxy file');
+				throw new Exception('Could not create directory ' . $dirname . ' for Proxy file');
 			}
 		}
 		
