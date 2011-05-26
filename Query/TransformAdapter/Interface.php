@@ -14,11 +14,13 @@ interface SimDAL_Query_TransformAdapter_Interface {
 	
 	function processWhereValue($value, SimDAL_Query_Where_Interface $where);
 	
+	function processWhereRawValue($value);
+	
 	function processWhereColumn($table, $column, $where=null);
 	
 	function processWhereRange(SimDAL_Query_Where_Value_Range $range);
 	
-	function processWhereArray(array $value);
+	function processWhereArray(array $values);
 	
 	function processWhereOperator($operator);
 	

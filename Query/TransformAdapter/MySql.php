@@ -8,7 +8,11 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 		$this->_adapter = $adapter;
 	}
 	
-	private function _getAdapter() {
+	/**
+	 * 
+	 * @return SimDAL_Persistence_AdapterAbstract
+	 */
+	protected function _getAdapter() {
 		return $this->_adapter;
 	}
 	
@@ -161,14 +165,19 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 			switch ($class) {
 				case 'SimDAL_Mapper_Column': return $this->processWhereColumn($value->getTable(), $value->getColumn(), $where); break;
 				case 'SimDAL_Query_Where_Value_Range': return $this->processWhereRange($value); break;
+				default: throw new SimDAL_Exception('Invalid class \'' . $class . '\' passed to method ' . __METHOD__);
 			}
 		} else if (is_array($value)) {
 			return $this->processWhereArray($value);
 		} else if (is_null($value)) {
 			return 'NULL';
 		} else {
-			return "'" . $this->_getAdapter()->escape($value) . "'";
+			return $this->processWhereRawValue($value);
 		}
+	}
+	
+	public function processWhereRawValue($value) {
+		return "'" . $this->_getAdapter()->escape($value) . "'";
 	}
 	
 	public function processWhereColumn($table, $column, $where=null) {
@@ -182,7 +191,7 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 		return $value1 . ' AND ' . $value2;
 	}
 	
-	public function processWhereArray(array $value) {
+	public function processWhereArray(array $values) {
 		$value = '(\'' . implode('\',\'', $value) . '\')';
 		
 		return $value;
