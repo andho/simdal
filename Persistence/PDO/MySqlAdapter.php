@@ -7,21 +7,18 @@ class SimDAL_Persistence_PDO_MySqlAdapter extends SimDAL_Persistence_PDO_PDOAbst
 	private $_username;
 	private $_password;
 	private $_options;
-	private $_transaction = false;
-	private $_auto_commit = false;
 	
-	public function __construct(SimDAL_Mapper $mapper, SimDAL_Session $session, $conf) {
-		parent::__construct($mapper, $session, $conf);
+	public function __construct(SimDAL_Mapper $mapper, $conf) {
+		parent::__construct($mapper, $conf);
 		
-		if ($conf instanceof PDO) {
-			$this->_conn = $conf;
+		if (isset($conf['connection']) && $conf['connection'] instanceof PDO) {
+			$this->_conn = $conf['connection'];
 		} else {
 			$this->_host = $conf['host'];
 			$this->_username = $conf['username'];
 			$this->_password = $conf['password'];
 			$this->_database = $conf['database'];
 			$this->_options = isset($conf['options']) ? $conf['options'] : array();
-			$this->_auto_commit = isset($conf['autocommit']) ? $conf['autocommit'] : false;
 		}
 	}
 	
@@ -31,7 +28,8 @@ class SimDAL_Persistence_PDO_MySqlAdapter extends SimDAL_Persistence_PDO_PDOAbst
 		}
 		
 		$this->_conn = new PDO('mysql:host=' . $this->_host . '; dbname=' . $this->_database, $this->_username, $this->_password, $this->_options);
-		//$this->_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		$this->_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		$this->_conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 	}
 	
 	public function _disconnect() {
@@ -121,33 +119,17 @@ class SimDAL_Persistence_PDO_MySqlAdapter extends SimDAL_Persistence_PDO_PDOAbst
 		return $value;
 	}
 	
+	public function lastInsertId() {
+		if (is_null($this->_conn)) {
+			return null;
+		}
+		
+		return $this->_conn->lastInsertId();
+	}
+	
 	protected function _queryToString(SimDAL_Query $query) {
 		$adapter = new SimDAL_Query_TransformAdapter_MySqlStatement($this);
 		return $adapter->queryToString($query);
-	}
-	
-	protected function _returnResultRows($sql, $class, $lockRows = false) {
-		$stmnt = $this->execute($sql);
-		
-		$rows = $stmnt->fetchAll(PDO::FETCH_ASSOC);
-		
-		$stmnt->closeCursor();
-		
-		return $this->_returnEntities($rows, $class);
-	}
-	
-	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
-		$stmnt = $this->execute($sql);
-		
-		$row = $stmnt->fetch(PDO::FETCH_ASSOC);
-		
-		$stmnt->closeCursor();
-		
-		if (is_null($class)) {
-			return $row;
-		}
-		
-		return $this->_returnEntity($row, $class);
 	}
 	
 }

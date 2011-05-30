@@ -52,7 +52,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		return self::$_factory;
 	}
 	
-	public function __construct($mapper, $adapter_class, $db_conf) {
+	public function __construct($mapper, $db_conf) {
 		if ($mapper instanceof SimDAL_Mapper) {
 			$this->_mapper = $mapper;
 		} else if (self::$_defaultMapper instanceof SimDAL_Mapper) {
@@ -61,11 +61,11 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			throw new SimDAL_MapperIsNotSetException();
 		}
 		
-		if (!is_null($adapter_class)) {
-			$this->_adapter = $adapter_class;
+		if (!is_null($db_conf)) {
+			$this->_adapter = $db_conf['class'];
 		}
-		if ($adapter_class instanceof SimDAL_Persistence_AdapterAbstract) {
-			$this->_adapter = $adapter_class;
+		if ($db_conf instanceof SimDAL_Persistence_AdapterAbstract) {
+			$this->_adapter = $db_conf;
 			return;
 		}
 		if (!is_string($this->_adapter) || !class_exists($this->_adapter)) {
@@ -79,15 +79,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$adapter_class = $this->_adapter;
 		
-		$this->_adapter = new $adapter_class($this->_mapper, $this, $db_conf);
+		$this->_adapter = new $adapter_class($this->_mapper, $db_conf);
 		
 		$this->startTransaction();
 	}
 	
 	public function __destruct() {
-		$this->rollback();
+		$this->getAdapter()->autoCommit(true);
 		$this->_adapter = null;
 		$this->_mapper = null;
+		if (PHP_VERSION_ID >= 50300) {
+			gc_collect_cycles();
+		}
 	}
 	
 	public function startTransaction() {
@@ -233,7 +236,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	public function count(SimDAL_Query $query) {
-		$query->from($query->getMapping(), array('count'=>'COUNT(*)'));
+		$query->from($query->getMapping(), array('count'=>'COUNT(*)'))
+			->limit(1);
 		return $this->getAdapter()->returnQueryResultAsArray($query);
 	}
 	
@@ -257,7 +261,13 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			}
 		}
 		
-		return $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
+		$row = $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
+		
+		if (is_null($limit)) {
+			return $this->_returnEntity($row, $query->getClass());
+		} else {
+			return $this->_returnEntities($row, $query->getClass());
+		}
 	}
 	
 	public function isAdded($entity) {
@@ -664,6 +674,14 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$this->_mockQueries[$query->getHash()]['count'] = $count;
 	}
 	
+	public function clear() {
+		$this->_actual = array();
+		$this->_modified = array();
+		$this->_new = array();
+		$this->_adapter->autoCommit(true);
+		$this->_adapter->rollbackTransaction();
+	}
+	
 	protected function _isMockQueriesSet() {
 		return count($this->_mockQueries) > 0;
 	}
@@ -689,6 +707,82 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 */
 	public function getAdapter() {
 		return $this->_adapter;
+	}
+	
+	protected function _returnEntities($rows, $class) {
+		$entities = array();
+		
+		foreach ($rows as $row) {
+			$entity = $this->_returnEntity($row, $class);
+			if (!isset($entityClass)) {
+				$entityClass = $this->getMapper()->getClassFromEntity($entity);
+				$pk = $this->getMapper()->getPrimaryKey($entityClass);
+				$pk_getter = 'get' . $pk;
+			}
+			$entities[$entity->$pk_getter()] = $entity;
+		}
+		
+		$collection = new SimDAL_Collection($entities);
+		
+		if (function_exists('gc_collect_cycles')) {
+			gc_collect_cycles();
+		}
+		
+		return $collection;
+	}
+	
+	protected function _returnEntity($row, $class) {
+		$pk = $this->getMapper()->getPrimaryKey($class);
+		$entity = $this->_entityFromArray($row, $class);
+		$pk_getter = 'get' . ucfirst($pk);
+		if ($this->isLoaded($class, $entity->$pk_getter())) {
+			return $this->getLoaded($class, $entity->$pk_getter());
+		}
+		
+		$this->updateEntity($entity);
+		return $entity;
+	}
+	
+	protected function _entityFromArray($row, &$class) {
+		$entityClass = $this->getMapper()->getTypeMorphClass($class, $row);
+		if ($entityClass == $class) {
+		    $mapping = $this->getMapper()->getMappingForEntityClass($class);
+		    $entityClass = $mapping->getDescendentClass($row);
+		}
+		
+		if (!class_exists($entityClass, true)) {
+			throw new Exception($entityClass . ' does not exist');
+		}
+		$entityProxyClass = $entityClass . 'SimDALProxy';
+		$dummy = new $entityProxyClass(array(), $this);
+		$class = $this->getMapper()->getClassFromEntity($dummy);
+		$dummy = null;
+		$curedData = array();
+		foreach ($this->getMapper()->getColumnData($class) as $property=>$column) {
+			if (!array_key_exists($column[0], $row)) {
+				continue;
+			}
+			$value = $row[$column[0]];
+			$value = !is_null($value) && get_magic_quotes_runtime() ? stripslashes($value) : $value;
+			switch($column[1]) {
+				case 'binary':
+				case 'blob': $value = base64_decode($value); break;
+				case 'varchar':
+				case 'text':
+				case 'date':
+				case 'datetime': break;
+				case 'float': $value = !is_null($value)?(float)$value:null; break;
+				case 'int': $value = !is_null($value)?(int)$value:null; break;
+			}
+			if ($column[1] == 'binary' || $column[1] == 'binary') {
+				$value = base64_decode($value);
+			}
+			$curedData[$property] = $value;
+		}
+		
+		$entity = new $entityProxyClass($curedData, $this);
+		
+		return $entity;
 	}
 	
 }
