@@ -28,9 +28,9 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	private $_password;
 	private $_database;
 	private $_conn;
-	private $_transaction = true;
+	protected $_transaction = true;
 	
-	public function __construct($mapper, $session, $conf) {
+	public function __construct($mapper, $conf) {
 		if (!isset($conf['host'])) {
 			throw new Exception("Database configuation doesn't specify database host");
 		}
@@ -44,7 +44,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 			throw new Exception("Database configuation doesn't specify database database");
 		}
 		
-		parent::__construct($mapper, $session, $conf);
+		parent::__construct($mapper, $conf);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
 		$this->_password = $conf['password'];
@@ -159,7 +159,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		return $sql;
 	}
 	
-	protected function _returnResultRows($sql, $class, $lockRows = false) {
+	protected function _returnResultRows($sql, $class=null, $lockRows = false) {
 		$this->_connect();
 		
 		if ($lockRows) {
@@ -168,18 +168,16 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		
 		$query = mysqli_query($this->_conn, $sql, MYSQLI_STORE_RESULT);
 		
-		if ($query === false) {
-			return $this->_returnEntities(array(), $class);
-		}
-		
 		$rows = array();
-		while ($row = mysqli_fetch_assoc($query)) {
-			$rows[] = $row;
+		if ($query !== false) {
+			while ($row = mysqli_fetch_assoc($query)) {
+				$rows[] = $row;
+			}
 		}
 		
 		mysqli_free_result($query);
 		
-		return $this->_returnEntities($rows, $class);
+		return $rows;
 	}
 	
 	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
@@ -197,13 +195,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		}
 		$row = mysqli_fetch_assoc($query);
 		
-		if (is_null($class)) {
-			return $row;
-		}
-		
-		mysqli_free_result($query);
-		
-		return $this->_returnEntity($row, $class);
+		return $row;
 	}
 	
 	public function query($sql) {
@@ -254,12 +246,6 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		}
 		
 		return "`$column`";
-	}
-	
-	public function executeQueryObject($query) {
-		$sql = $this->_queryToString($query);
-		
-		return $this->execute($sql);
 	}
 	
 	public function execute($sql) {

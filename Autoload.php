@@ -102,7 +102,7 @@ class SimDAL_Autoload {
 	        		include self::getDomainDirectory() . DIRECTORY_SEPARATOR . $class_file . '.php';
 	        	}
         	} else {
-        		include $class_file . '.php';
+        		@include $class_file . '.php';
         		return true;
         	}
         }

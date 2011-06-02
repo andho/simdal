@@ -26,6 +26,8 @@ class SimDAL_Query_TransformAdapter_MySqlStatement extends SimDAL_Query_Transfor
 			$this->_bind_params[] = $value;
 		}
 		
+		$string = substr($string, 0, -1) . ')';
+		
 		return $string;
 	}
 	

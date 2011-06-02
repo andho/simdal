@@ -25,8 +25,8 @@ class SimDAL_Persistence_PDO_SqLite3Adapter extends SimDAL_Persistence_AdapterAb
 	
 	private $_filename;
 	
-	public function __construct($mapper, $session, $conf) {
-		parent::__construct($mapper, $session);
+	public function __construct($mapper, $conf) {
+		parent::__construct($mapper);
 		if ($conf instanceof PDO) {
 			$this->_conn = $conf;
 		} else {

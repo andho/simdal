@@ -28,7 +28,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 	private $_password;
 	private $_database;
 	private $_conn;
-	private $_transaction = false;
+	protected $_transaction = false;
 	
 	static protected $_verbose = false;
 	
@@ -36,7 +36,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 		self::$_verbose = $verbose;
 	}
 	
-	public function __construct($mapper, $adapter, array $conf) {
+	public function __construct($mapper, array $conf) {
 		if (!isset($db['host'])) {
 			throw new Exception("Database configuation doesn't specify database host");
 		}
@@ -50,7 +50,7 @@ class SimDAL_Persistence_MysqlAdapter extends SimDAL_Persistence_AdapterAbstract
 			throw new Exception("Database configuation doesn't specify database database");
 		}
 		
-		parent::__construct($mapper, $adapter);
+		parent::__construct($mapper, $conf);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
 		$this->_password = $conf['password'];

@@ -200,6 +200,10 @@ class SimDAL_ProxyGenerator {
 		$output .= '		}' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
+		$output .= '	public function __destruct() {' . PHP_EOL;
+		$output .= '		$this->_session = null;' . PHP_EOL;
+		$output .= '	}' . PHP_EOL . PHP_EOL;
+		
 		$output .= '	private function _isSimDALAssociationLoaded($association_name) {' . PHP_EOL;
 		$output .= '		if (!array_key_exists($association_name, $this->_loadedSimDALEntities)) {' . PHP_EOL;
 		$output .= '			throw new Exception(__METHOD__ . \' called with invalid association name\');' . PHP_EOL;
@@ -218,7 +222,7 @@ class SimDAL_ProxyGenerator {
 		$output .= '		return $this->_session;' . PHP_EOL;
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
-		$output .= '	public function _SimDAL_setPrimaryKey($values, $session) {' . PHP_EOL;
+		$output .= '	public function _SimDAL_setPrimaryKey($values, &$session) {' . PHP_EOL;
 		$primary_key = $mapping->getPrimaryKey();
 		$output .= '		if ($session !== $this->_getSession()) {' . PHP_EOL;
 		$output .= '			throw new Exception(__METHOD__ . \' called from outside of library scope\');' . PHP_EOL;
@@ -314,7 +318,7 @@ class SimDAL_ProxyGenerator {
 		$output = '';
 		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
 		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
-		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
+		$output .= '			$session = $this->_getSession();' . PHP_EOL;
 		if ($association->isDependent ()) {
 			$output .= '                    $this->' . $setter . '(' . PHP_EOL;
 			$output .= '                            $session->load(\'' . $association->getClass () . '\')' . PHP_EOL;
@@ -362,7 +366,7 @@ class SimDAL_ProxyGenerator {
 		$output = '';
 		$output .= '	public function ' . $getter . '($load=true) {' . PHP_EOL;
 		$output .= '		if ($load && !$this->_isSimDALAssociationLoaded(\'' . $association->getMethod() . '\')) {' . PHP_EOL;
-		$output .= '			$session = SimDAL_Session::factory()->getCurrentSession();' . PHP_EOL;
+		$output .= '			$session = $this->_getSession();' . PHP_EOL;
 		$output .= '			$this->' . $setter . '(' . PHP_EOL;
 		$output .= '				$session->load(\'' . $association->getClass() . '\')' . PHP_EOL;
 		$output .= '				->whereColumn(\'' . $association->getParentKey() . '\')' . PHP_EOL;

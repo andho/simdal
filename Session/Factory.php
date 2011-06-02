@@ -43,9 +43,9 @@ class SimDAL_Session_Factory {
 	/**
 	 * @return SimDAL_Session
 	 */
-	public function getCurrentSession() {
+	public function &getCurrentSession() {
 		if (is_null($this->_session)) {
-			$this->_session = $this->getNewSession();
+			$this->_session =& $this->getNewSession();
 		}
 		
 		return $this->_session;
@@ -54,12 +54,14 @@ class SimDAL_Session_Factory {
 	/**
 	 * @return SimDAL_Session
 	 */
-	public function getNewSession() {
-		$adapter_class = $this->_db['class'];
-		return new SimDAL_Session($this->_mapper, $adapter_class, $this->_db);
+	public function &getNewSession($db=null) {
+		$db = !is_null($db) ? $db : $this->_db;
+		$session = new SimDAL_Session($this->_mapper, $db);
+		return $session;
 	}
 	
 	public function clear() {
+		$this->_session->clear();
 		$this->_session = null;
 	}
 	
