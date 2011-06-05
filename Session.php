@@ -329,7 +329,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	 * @return SimDAL_Query
 	 */
 	public function update($class) {
-		$query = new SimDAL_Query($this, $this->getMapper(), SimDAL_Query::TYPE_UPDATE);
+		$query = new SimDAL_Query($this, SimDAL_Query::TYPE_UPDATE, $this->getMapper());
 		$query->limit(0);
 		$mapping = $this->getMapper()->getMappingForEntityClass($class);
 		$query->from($mapping);
@@ -468,7 +468,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$pk_getter = 'get' . ucfirst($primaryKey);
 		foreach ($this->_modified[$class] as $key=>$entity) {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
-			$row = $this->_getSession()->getChanges($entity);
+			$row = $this->getChanges($entity);
 			$update = $this->update($class)
 				->whereIdIs($entity->$pk_getter());
 			

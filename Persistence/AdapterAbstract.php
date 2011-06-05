@@ -468,12 +468,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $this->execute($sql);
 	}
 	
-	public function executeQueryObject(SimDAL_Query $query) {
-		$sql = $this->_queryToString($query);
-		
-		return $this->execute($sql);
-	}
-	
 	abstract public function execute($sql);
 	
 	abstract public function startTransaction();
