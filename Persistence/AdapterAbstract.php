@@ -325,7 +325,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		}
 	}
 	
-	protected function _transformData(SimDAL_Mapper_Column $column, $value, SimDAL_Mapper_Entity $mapping) {
+	public function transformData(SimDAL_Mapper_Column $column, $value, SimDAL_Mapper_Entity $mapping) {
 		if (is_null($value)) {
 			return "NULL";
 		}

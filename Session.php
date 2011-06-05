@@ -469,6 +469,9 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		foreach ($this->_modified[$class] as $key=>$entity) {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
 			$row = $this->getChanges($entity);
+			if (count($row) === 0) {
+				return true;
+			}
 			$update = $this->update($class)
 				->whereIdIs($entity->$pk_getter());
 			
@@ -476,8 +479,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 				$update->set($key, $value);
 			}
 			
-			if ($update->execute()) {
-				return false;
+			if (!$update->execute()) {
+				throw new SimDAL_Exception('Unable to commit changes');
 			}
 			$actual = clone($entity);
 			$this->_actual[$class][$entity->$pk_getter()] = $actual;

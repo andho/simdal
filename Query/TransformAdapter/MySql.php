@@ -150,7 +150,7 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 			if ($value instanceof SimDAL_Mapper_Entity) {
 				$set .= $this->processWhereColumn($value->getTable(), $value->getColumn());
 			} else {
-				$set .= $this->_getAdapter()->_transformData($column, $value, $column->getEntity());
+				$set .= $this->_getAdapter()->transformData($column, $value, $column->getEntity());
 			}
 			
 			$sets[] = $set;
@@ -192,7 +192,7 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 	}
 	
 	public function processWhereArray(array $values) {
-		$value = '(\'' . implode('\',\'', $value) . '\')';
+		$value = '(\'' . implode('\',\'', $values) . '\')';
 		
 		return $value;
 	}
