@@ -410,7 +410,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			}
 			
 			if ($transformData) {
-				$array[$column->getColumn()] = $this->_transformData($key, $entity->$method(), $class);
+				$array[$column->getColumn()] = $this->transformData($key, $entity->$method(), $class);
 			} else {
 				$array[$column->getColumn()] = $entity->$method();
 			}
@@ -437,7 +437,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			}
 			
 			if ($transformData) {
-				$array[$column->getColumn()] = $this->_transformData($column, $entity->$method(), $mapping);
+				$array[$column->getColumn()] = $this->transformData($column, $entity->$method(), $mapping);
 			} else {
 				$array[$column->getColumn()] = $entity->$method();
 			}
