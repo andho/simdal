@@ -468,7 +468,15 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		$pk_getter = 'get' . ucfirst($primaryKey);
 		foreach ($this->_modified[$class] as $key=>$entity) {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
-			if (!$this->getAdapter()->updateEntity($entity)) {
+			$row = $this->_getSession()->getChanges($entity);
+			$update = $this->update($class)
+				->whereIdIs($entity->$pk_getter());
+			
+			foreach ($row as $key=>$value) {
+				$update->set($key, $value);
+			}
+			
+			if ($update->execute()) {
 				return false;
 			}
 			$actual = clone($entity);
