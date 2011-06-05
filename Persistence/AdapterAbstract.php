@@ -173,7 +173,7 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 	protected function _processUpdateQuery(SimDAL_Mapper_Entity $mapping, $data, $id) {
 		$pk = $mapping->getPrimaryKeyColumn()->getColumn();
 		
-		$sql = "UPDATE ".$this->_quoteIdentifier($mapping->getTable())." SET ";
+		$sql = "UPDATE ".$this->quoteIdentifier($mapping->getTable())." SET ";
 		
 		$columns = $mapping->getColumns();
 		
