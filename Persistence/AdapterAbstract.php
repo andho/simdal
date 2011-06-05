@@ -148,39 +148,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return true;
 	}
 	
-	public function _update($entity) {
-		$row = $this->getUnitOfWork()->getChanges($entity);
-		if (count($row) <= 0) {
-			return true;
-		}
-		
-		$class = $this->_getMapper()->getClassFromEntity($entity);
-		$pk = $this->_getMapper()->getPrimaryKey($class);
-			
-		$sql = $this->_processUpdateQuery($class, $row, $entity->$pk);
-		$result = $this->execute($sql);
-		if ($result === false) {
-			throw new SimDAL_Persistence_AdapterException($this, $this->getAdapterError() . ' for entity ' . get_class($entity));
-		}
-				
-		return true;
-	}
-	
-	protected function _processUpdateQuery(SimDAL_Mapper_Entity $mapping, $data, $id) {
-		$pk = $mapping->getPrimaryKeyColumn()->getColumn();
-		
-		$sql = "UPDATE ".$this->quoteIdentifier($mapping->getTable())." SET ";
-		
-		$columns = $mapping->getColumns();
-		
-		foreach ($data as $key=>$value) {
-			$sql .= $this->_quoteIdentifier($columns[$key]->getColumn())." = ".$this->_transformData($columns[$key], $value, $mapping) . ",";
-		}
-		$sql = substr($sql,0,-1) . " WHERE `$pk`=$id";
-		
-		return $sql;
-	}
-	
 	protected function _processInsertQuery(SimDAL_Mapper_Entity $mapping, $data) {
 		$sql = "INSERT INTO ".$this->_quoteIdentifier($mapping->getTable())." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
@@ -194,64 +161,6 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 		return $sql;
 	}
 	
-	public function insert($entity) {
-		$this->getUnitOfWork()->add($entity);
-	}
-	
-	public function delete($entity) {
-		$this->getUnitOfWork()->delete($entity);
-	}
-	
-	public function deleteById($id, $entity) {
-		$this->getUnitOfWork()->delete(
-			$id,
-			$this->_getMapper()->getTable(
-				$this->_getClass($entity)
-			)
-		);
-	}
-	
-	public function deleteByColumn($class, $value, $column) {
-		return $this->getUnitOfWork()->delete($value, $class, $column);
-	}
-
-	public function updateMultiple($class, $data) {
-		if (is_array($data) && count($data) > 0) {
-			foreach ($data as $id=>$entity) {
-				$row = $this->getUnitOfWork()->getChanges($entity);
-				if (count($row) <= 0) {
-					continue;
-				}
-				
-				$sql = $this->_processUpdateQuery($class, $row, $id);
-				$result = $this->execute($sql);
-				if ($result === false) {
-					throw new SimDAL_Persistence_AdapterException($this, $this->getAdapterError() . ' for entity ' . $class);
-				}
-				$this->_resolveEntityDependencies($entity);
-			}
-		}
-		
-		return true;
-	}
-	
-	public function deleteMultiple($class, $keys) {
-		if (empty($keys)) {
-			return true;
-		}
-		
-		$sql = $this->_processMultipleDeleteQueries($class, $keys);
-		
-		$result = $this->execute($sql);
-		
-		if ($result === false) {
-			throw new SimDAL_Persistence_AdapterException($this, $this->getAdapterError() . ' for entity ' . $class);
-		}
-		
-		return true;
-	}
-	
-
 	protected function _returnEntities($rows, $class) {
 		$entities = array();
 		
@@ -622,6 +531,12 @@ abstract class SimDAL_Persistence_AdapterAbstract {
 			return false;
 		}
 		return $this->_mockQueries[$hash]['result'];
+	}
+	
+	public function executeQueryObject($query) {
+		$sql = $this->_queryToString($query);
+		
+		return $this->execute($sql);
 	}
 	
 	abstract public function execute($sql);

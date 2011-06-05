@@ -256,12 +256,6 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		return "`$column`";
 	}
 	
-	public function executeQueryObject($query) {
-		$sql = $this->_queryToString($query);
-		
-		return $this->execute($sql);
-	}
-	
 	public function execute($sql) {
 		$this->_connect();
 		
