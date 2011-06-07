@@ -491,7 +491,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 				$update->set($key, $value);
 			}
 			
-			if (!$update->execute()) {
+			if ($update->execute() === false) {
 				throw new SimDAL_Exception('Unable to commit changes');
 			}
 			$actual = clone($entity);

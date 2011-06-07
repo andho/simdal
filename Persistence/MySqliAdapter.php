@@ -258,7 +258,8 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		}
 		
 		if ($result === true) {
-			return mysqli_affected_rows($this->_conn);
+			$affected_rows = mysqli_affected_rows($this->_conn);
+			return $affected_rows;
 		}
 		
 		return $result;
