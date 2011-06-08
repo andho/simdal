@@ -235,6 +235,18 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		return $query;
 	}
 	
+	public function loadObjectFromSql($sql, $class) {
+		$row = $this->getAdapter()->returnQueryAsRow($sql);
+		
+		return $this->_returnEntity($row, $class);
+	}
+	
+	public function loadObjectsFromSql($sql, $class) {
+		$rows = $this->getAdapter()->returnQueryAsRows($sql);
+		
+		return $this->_returnEntities($rows, $class);
+	}
+	
 	public function count(SimDAL_Query $query) {
 		$query->from($query->getMapping(), array('count'=>'COUNT(*)'))
 			->limit(1);
@@ -470,7 +482,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			$this->_processUpdateHooks($entity, $this->getActualFromEntity($entity));
 			$row = $this->getChanges($entity);
 			if (count($row) === 0) {
-				return true;
+				continue;
 			}
 			$update = $this->update($class)
 				->whereIdIs($entity->$pk_getter());
@@ -479,7 +491,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 				$update->set($key, $value);
 			}
 			
-			if (!$update->execute()) {
+			if ($update->execute() === false) {
 				throw new SimDAL_Exception('Unable to commit changes');
 			}
 			$actual = clone($entity);
