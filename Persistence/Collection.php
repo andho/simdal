@@ -109,7 +109,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		
 		$otherside_association = $this->_getAssociation()->getMatchingAssociationFromAssociationClass();
 		$method = 'set' . $otherside_association->getMethod();
-		$entity->$method($this->_getParent(), false);
+		$method_ref = new ReflectionMethod($entity, $method);
+		if ($method_ref->isPublic()) {
+			$entity->$method($this->_getParent(), false);
+		}
 		
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
 		$primaryKey_getter = 'get' . $primaryKey;
