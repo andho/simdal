@@ -755,6 +755,10 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	}
 	
 	protected function _returnEntity($row, $class) {
+		if (is_null($row)) {
+			return null;
+		}
+		
 		$pk = $this->getMapper()->getPrimaryKey($class);
 		$entity = $this->_entityFromArray($row, $class);
 		$pk_getter = 'get' . ucfirst($pk);
