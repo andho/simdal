@@ -678,11 +678,9 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		/* @var $column SimDAL_Mapper_Column */
 		foreach ($mapping->getColumns() as $column) {
 			$property = $column->getProperty();
-			$method = ucfirst($property);
-			$getter = 'get' . $method;
-			$setter = 'set' . $method;
-			if ($entity->$getter() != $actual->$getter()) {
-				$data[$property] = $entity->$getter();
+			$property_ref = new ReflectionProperty(get_class($entity), $property);
+			if ($property_ref->getValue($entity) != $property_ref->getValue($actual)) {
+				$data[$property] = $property_ref->getValue($entity);
 			}
 		}
 		
