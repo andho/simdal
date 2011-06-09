@@ -275,7 +275,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		
 		$row = $this->getAdapter()->returnQueryResult($query, $this->_lockRows);
 		
-		if (is_null($limit)) {
+		if (is_null($limit) || $limit === 1) {
 			return $this->_returnEntity($row, $query->getClass());
 		} else {
 			return $this->_returnEntities($row, $query->getClass());
