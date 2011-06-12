@@ -86,9 +86,9 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	 */
 	protected $_query = null;
 	
-	public function __construct(SimDAL_ProxyInterface $parent, SimDAL_Session $session, SimDAL_Mapper_Association $association) {
+	public function __construct(SimDAL_ProxyInterface $parent, SimDAL_Session &$session, SimDAL_Mapper_Association $association) {
 		$this->_parent = $parent;
-		$this->_session = $session;
+		$this->_session =& $session;
 		$this->_association = $association;
 	}
 	
@@ -109,7 +109,10 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		
 		$otherside_association = $this->_getAssociation()->getMatchingAssociationFromAssociationClass();
 		$method = 'set' . $otherside_association->getMethod();
-		$entity->$method($this->_getParent(), false);
+		$method_ref = new ReflectionMethod($entity, $method);
+		if ($method_ref->isPublic()) {
+			$entity->$method($this->_getParent(), false);
+		}
 		
 		$primaryKey = $this->_getSession()->getMapper()->getMappingForEntityClass($class)->getPrimaryKey();
 		$primaryKey_getter = 'get' . $primaryKey;
@@ -134,6 +137,7 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 				$this->_getSession()->deleteEntity($entity);
 			}
 		}
+		$this->_keymap = array_values($this->_keymap); // reindex the array as the insetting the keymap index broke the sequence
 		
 		return null;
 	}

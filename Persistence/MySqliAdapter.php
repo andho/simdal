@@ -28,9 +28,9 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	private $_password;
 	private $_database;
 	private $_conn;
-	private $_transaction = true;
+	protected $_transaction = true;
 	
-	public function __construct($mapper, $session, $conf) {
+	public function __construct($mapper, $conf) {
 		if (!isset($conf['host'])) {
 			throw new Exception("Database configuation doesn't specify database host");
 		}
@@ -44,7 +44,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 			throw new Exception("Database configuation doesn't specify database database");
 		}
 		
-		parent::__construct($mapper, $session);
+		parent::__construct($mapper, $conf);
 		$this->_host = $conf['host'];
 		$this->_username = $conf['username'];
 		$this->_password = $conf['password'];
@@ -101,7 +101,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		
 		return $query->__toString();
 		
-		return "SELECT * FROM ".$this->_quoteIdentifier($table)." WHERE `$column` = '$id'";
+		return "SELECT * FROM ".$this->quoteIdentifier($table)." WHERE `$column` = '$id'";
 	}
 	
 	protected function _processFindByColumnQuery($table, $key, $value, $limit) {
@@ -154,12 +154,12 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 	protected function _processInsertQuery(SimDAL_Mapper_Entity $entity, $data) {
 		$table = $entity->getTable();
 		
-		$sql = "INSERT INTO ".$this->_quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
+		$sql = "INSERT INTO ".$this->quoteIdentifier($table)." (`".implode('`,`',array_keys($data))."`) VALUES (".implode(',',$data).")";
 		
 		return $sql;
 	}
 	
-	protected function _returnResultRows($sql, $class, $lockRows = false) {
+	protected function _returnResultRows($sql, $class=null, $lockRows = false) {
 		$this->_connect();
 		
 		if ($lockRows) {
@@ -168,18 +168,16 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		
 		$query = mysqli_query($this->_conn, $sql, MYSQLI_STORE_RESULT);
 		
-		if ($query === false) {
-			return $this->_returnEntities(array(), $class);
-		}
-		
 		$rows = array();
-		while ($row = mysqli_fetch_assoc($query)) {
-			$rows[] = $row;
+		if ($query !== false) {
+			while ($row = mysqli_fetch_assoc($query)) {
+				$rows[] = $row;
+			}
 		}
 		
 		mysqli_free_result($query);
 		
-		return $this->_returnEntities($rows, $class);
+		return $rows;
 	}
 	
 	protected function _returnResultRow($sql, $class=null, $lockRows = false) {
@@ -197,13 +195,7 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		}
 		$row = mysqli_fetch_assoc($query);
 		
-		if (is_null($class)) {
-			return $row;
-		}
-		
-		mysqli_free_result($query);
-		
-		return $this->_returnEntity($row, $class);
+		return $row;
 	}
 	
 	public function query($sql) {
@@ -247,19 +239,13 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		return $result;
 	}
 	
-	protected function _quoteIdentifier($column) {
+	public function quoteIdentifier($column) {
 		$parts = explode('.', $column);
 		if (count($parts) > 0) {
 			$column = implode('`.`', $parts);
 		}
 		
 		return "`$column`";
-	}
-	
-	public function executeQueryObject($query) {
-		$sql = $this->_queryToString($query);
-		
-		return $this->execute($sql);
 	}
 	
 	public function execute($sql) {
@@ -272,15 +258,16 @@ class SimDAL_Persistence_MySqliAdapter extends SimDAL_Persistence_DBAdapterAbstr
 		}
 		
 		if ($result === true) {
-			return mysqli_affected_rows($this->_conn);
+			$affected_rows = mysqli_affected_rows($this->_conn);
+			return $affected_rows;
 		}
 		
 		return $result;
 	}
 	
 	protected function _queryToString(SimDAL_Query $query) {
-		$adapter = new SimDAL_Query_TransformAdapter_Mysql();
-		$adapter->queryToString($query);
+		$adapter = new SimDAL_Query_TransformAdapter_MySql($this);
+		return $adapter->queryToString($query);
 	}
 	
 }

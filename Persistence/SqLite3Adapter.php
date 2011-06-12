@@ -26,8 +26,8 @@ class SimDAL_Persistence_SqLite3Adapter extends SimDAL_Persistence_AdapterAbstra
 	private $_filename;
 	private $_conn;
 	
-	public function __construct($mapper, $session, $conf) {
-		parent::__construct($mapper, $session);
+	public function __construct($mapper, $conf) {
+		parent::__construct($mapper);
 		$this->_filename = realpath($conf['filename']);
 	}
 	

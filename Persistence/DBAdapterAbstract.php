@@ -2,8 +2,8 @@
 
 abstract class SimDAL_Persistence_DBAdapterAbstract extends SimDAL_Persistence_AdapterAbstract {
 	
-	public function __construct(SimDAL_Mapper $mapper=null, SimDAL_Session $session=null, $conf) {
-		$this->_conn = $connection;
+	public function __construct(SimDAL_Mapper $mapper=null, $conf) {
+		parent::__construct($mapper);
 	}
 	
 	public function __destruct() {

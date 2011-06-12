@@ -299,6 +299,7 @@ class SimDAL_Mapper {
 		if (!is_string($class) && !is_numeric($class)) {
 			return false;
 		}
+		$previous_class = $class;
 		while (!array_key_exists($class, $this->map) && $class !== false) {
 			$class = get_parent_class($class);
 		}

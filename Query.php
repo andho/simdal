@@ -54,6 +54,10 @@ class SimDAL_Query {
 		$this->_mapper = $mapper;
 	}
 	
+	public function __destruct() {
+		$this->_parent = null;
+	}
+	
 	/**
 	 * @return SimDAL_Mapper
 	 */
@@ -258,7 +262,9 @@ class SimDAL_Query {
 	
 	public function fetch($limit=null, $offset=null) {
 		if (method_exists($this->_parent, 'fetch')) {
-			return $this->_parent->fetch($limit, $offset, $this);
+			$parent = $this->_parent;
+			$this->_parent = null;
+			return $parent->fetch($limit, $offset, $this);
 		}
 		
 		return false;
