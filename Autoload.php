@@ -25,6 +25,7 @@ class SimDAL_Autoload {
 	
 	protected static $_domainDir = null;
 	protected static $_mappers = array();
+	protected static $_loadNonDomainClasses = true;
 	
 	public static function setDomainDirectory($dir) {
 		$simdal_dir = $dir . DIRECTORY_SEPARATOR . '.simdal';
@@ -60,6 +61,10 @@ class SimDAL_Autoload {
 	
 	public static function registerMapper(SimDAL_Mapper $mapper) {
 		self::$_mappers[] = $mapper;
+	}
+	
+	public static function loadNonDomainClasses($load = true) {
+		self::$_loadNonDomainClasses = $load;
 	}
 	
     public static function autoload($class) {
@@ -110,5 +115,5 @@ class SimDAL_Autoload {
         
         return false;
     }
-
+    
 }
