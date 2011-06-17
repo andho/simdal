@@ -75,16 +75,7 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 		return $this->_data[$offset];
 	}
 	public function offsetSet($offset, $value) {
-		if (is_null($offset)) {
-			$offset = rand();
-			$key = count($this->_data);
-		} else if ($this->offsetExists($offset)) {
-			$key = array_search($offset, $this->_keymap);
-		} else {
-			$key = count($this->_data);
-		}
-		$this->_data[$offset] = $value;
-		$this->_keymap[$key] = $offset;
+		$this->add($value, $offset);
 	}
 	public function offsetUnset($offset) {
 		if (!$this->offsetExists($offset)) {
@@ -98,12 +89,27 @@ class SimDAL_Collection implements Iterator, Countable, ArrayAccess {
 	// end of ArrayAccess implementation
 	
 	public function __construct($data) {
-		foreach ($data as $key=>$value) {
-			if (in_array($value, $this->_data)) {
-				continue;
+		if (is_array($data) || is_object($data)) {
+			foreach ($data as $key=>$value) {
+				if (in_array($value, $this->_data)) {
+					continue;
+				}
+				$this[$key] = $value;
 			}
-			$this[$key] = $value;
 		}
+	}
+	
+	public function add($value, $offset=null) {
+		if (is_null($offset)) {
+			$offset = rand();
+			$key = count($this->_data);
+		} else if ($this->offsetExists($offset)) {
+			$key = array_search($offset, $this->_keymap);
+		} else {
+			$key = count($this->_data);
+		}
+		$this->_data[$offset] = $value;
+		$this->_keymap[$key] = $offset;
 	}
 	
 	public function get($position) {

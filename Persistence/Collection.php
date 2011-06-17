@@ -86,10 +86,12 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 	 */
 	protected $_query = null;
 	
-	public function __construct(SimDAL_ProxyInterface $parent, SimDAL_Session &$session, SimDAL_Mapper_Association $association) {
+	public function __construct(SimDAL_ProxyInterface $parent, SimDAL_Session &$session, SimDAL_Mapper_Association $association, $data=null) {
 		$this->_parent = $parent;
 		$this->_session =& $session;
 		$this->_association = $association;
+		
+		parent::__construct($data);
 	}
 	
 	public function add(&$entity, $load=true) {
@@ -98,9 +100,15 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		 * commiting this entity will be in the collection twice.
 		 * @todo find a way to load data when needed and not when adding an Entity
 		 */
-		if ($load) {
+		if ($load === true) {
 			//$this->_loadAll();
-		} 
+		}
+		
+		if (is_string($load) || is_numeric($load)) {
+			$offset = $load;
+		} else {
+			$offset = null;
+		}
 		
 		$class = $this->_getAssociation()->getClass();
 		if (!$entity instanceof $class) {
@@ -119,7 +127,8 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		if (!$this->_getSession()->isLoaded($class, $entity->$primaryKey_getter()) && !$this->_getSession()->isAdded($entity)) {
 			$this->_getSession()->addEntity($entity);
 		}
-		$this[$entity->$primaryKey_getter()] = $entity;
+		
+		parent::add($entity, $entity->$primaryKey_getter());
 		$this->_new[] = $entity;
 	}
 	

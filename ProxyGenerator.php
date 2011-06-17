@@ -192,6 +192,9 @@ class SimDAL_ProxyGenerator {
 				$output .= '				}' . PHP_EOL;
 			} else if ($association->getType() == 'one-to-many') {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
+				$output .= '				if (!$reference instanceof SimDAL_Persistence_Collection) {' . PHP_EOL;
+				$output .= '					$this->' . $getter . '();' . PHP_EOL;
+				$output .= '				}' . PHP_EOL;
 			}
 			$output .= '				$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 			$output .= '			}' . PHP_EOL;
