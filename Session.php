@@ -250,7 +250,8 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 	public function count(SimDAL_Query $query) {
 		$query->from($query->getMapping(), array('count'=>'COUNT(*)'))
 			->limit(1);
-		return $this->getAdapter()->returnQueryResultAsArray($query);
+		$count = $this->getAdapter()->returnQueryResultAsArray($query);
+		return $count['count'];
 	}
 	
 	public function fetch($limit=null, $offset=null, SimDAL_Query $query=null) {
