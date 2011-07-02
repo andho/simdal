@@ -100,11 +100,12 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 		/* @var $join SimDAL_Query_Join_Descendent */
 	    $joins = '';
 		foreach ($query->getJoins() as $join) {
-			$joins .= ' ' . $join->getJoinType() . ' ' . $join->getTable() . ' ON ';
+			$joins .= ' ' . $join->getJoinType() . ' JOIN ' . $join->getTable() . ' ON ';
+			$wheres = array();
 			foreach ($join->getWheres() as $where) {
-				$method = 'process' . $where->getProcessMethod();
-				$joins .= $this->$method($where);
+				$wheres[] = $this->processWhere($where);
 			}
+			$joins .= implode(' AND ', $wheres);
 			$columns_array = $join->getColumns();
 			if ($join->hasAliases() || count($columns_array) > 0) {
 			    $columns_array = $join->getTableColumns();
@@ -118,7 +119,7 @@ class SimDAL_Query_TransformAdapter_MySql implements SimDAL_Query_TransformAdapt
 			        }
 			        $columns[] = $column_string;
 			    }
-			} else {
+			} else if (!is_null($columns_array)) {
 			    $columns[] = $join->getTable() . '.*';
 			}
 		}

@@ -165,6 +165,11 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 		return $this->_associations;
 	}
 	
+	/**
+	 * 
+	 * @param string $identifier
+	 * @return SimDAL_Mapper_Association
+	 */
 	public function getAssociation($identifier) {
 		return $this->_associations[$identifier];
 	}

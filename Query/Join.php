@@ -19,9 +19,11 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * @author Amjad Mohamed <andhos@gmail.com>
  */
 
-class SimDAL_Query_Join_Descendant {
+class SimDAL_Query_Join {
 	
 	protected $_descendant;
 	protected $_type;

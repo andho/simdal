@@ -53,7 +53,9 @@ class SimDAL_Persistence_Collection extends SimDAL_Collection implements SimDAL_
 		foreach ($this->_data as $loaded) {
 			$keys[] = $loaded->$pk_getter();
 		}
-		$query->whereColumn($pk)->isNotIn($keys);
+		if (count($keys) > 0) {
+			$query->whereColumn($pk)->isNotIn($keys);
+		}
 		
 		$count = $this->_getSession()->count($query);
 		return $count['count'] + $loaded_count;

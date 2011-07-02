@@ -135,13 +135,25 @@ class SimDAL_Query {
 	}
 	
 	public function whereProperty($property, $entity=null) {
-		if (is_null($entity)) {
-			$entity = $this->_from;
-		} else if ($this->_from->getClass() == $entity) {
-			$entity = $this->_from;
+		if ($property instanceof SimDAL_Mapper_Column) {
+			$column = $property;
+			$entity = $property->getEntity();
+		} else {
+			if (is_null($entity)) {
+				$entity = $this->_from;
+			} else if ($this->_from->getClass() == $entity) {
+				$entity = $this->_from;
+			} else {
+				/* @var $join SimDAL_Query_Join_Association */
+				foreach ($this->_join as $join) {
+					if ($join->getMapping()->getClass() == $entity) {
+						$entity = $join->getMapping();
+					}
+				}
+			}
+			/* @var $entity SimDAL_Mapper_Entity */
+			$column = $entity->getColumn($property);
 		}
-		/* @var $entity SimDAL_Mapper_Entity */
-		$column = $entity->getColumn($property);
 		
 		if (!$column) {
 			throw new Exception("Property '$property' does not exist in Entity '" . $entity->getClass() . "'");
@@ -156,12 +168,33 @@ class SimDAL_Query {
 	/**
 	 * 
 	 * @param unknown_type $join
-	 * @return SimDAL_Query
+	 * @return SimDAL_Query_Join_Abstract
 	 */
-	public function join($join) {
-		if ($join instanceof SimDAL_Mapper_Descendent) {
-			$this->_join[] = new SimDAL_Query_Join_Descendent($join);
+	public function join($class) {
+		if (is_string($class)) {
+			$mapping = $this->_getMapper()->getMappingForEntityClass($class);
 		}
+		
+		$class = get_class($mapping);
+		
+		switch ($class) {
+			case 'SimDAL_Mapper_Descendent':
+				$join = new SimDAL_Query_Join_Descendent($mapping);
+				break;
+			case 'SimDAL_Mapper_Entity':
+				$association = $this->_from->getAssociation($mapping->getClass());
+				$join = new SimDAL_Query_Join_Association($this, $association);
+				if ($association->isParent()) {
+					$join->whereProperty($association->getMapping()->getColumn($association->getParentKey()))
+						->equals($association->getAssociationEntity()->getColumn($association->getForeignKey()));
+				} else {
+					$join->whereProperty($association->getMapping()->getColumn($association->getForeignKey()))
+						->equals($association->getAssociationEntity()->getColumn($association->getParentKey()));
+				}
+				break;
+		}
+		
+		$this->_join[] = $join;
 		
 		return $this;
 	}

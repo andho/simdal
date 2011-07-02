@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class SimDAL_Query_Join_Descendent {
+class SimDAL_Query_Join_Descendent extends SimDAL_Query_Join_Abstract {
 	
     /**
      * 
@@ -34,39 +34,16 @@ class SimDAL_Query_Join_Descendent {
 	
 	public function __construct($descendant, $type=null, array $columns = array()) {
 		$this->_descendant = $descendant;
-		$this->_columns = $columns;
-		if (!is_null($type)) {
-		$this->_type = $type;
-		} else {
-			$this->_type = 'inner';
-		}
         
-		$this->_setupWheres();
-	}
-	
-	public function getJoinType() {
-		switch ($this->_type) {
-			case 'inner':
-				return 'INNER JOIN';
-			default:
-				return 'INNER';
-		}
+		parent::__construct($type, $columns);
 	}
 	
 	public function hasAliases() {
 	    return $this->_descendant->hasAliases();
 	}
 	
-	public function getColumns() {
-	    return $this->_columns;
-	}
-	
 	public function getTableColumns() {
 	    return $this->_descendant->getColumns();
-	}
-	
-	public function getWheres() {
-		return $this->_wheres;
 	}
 	
 	public function getTable() {
