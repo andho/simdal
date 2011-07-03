@@ -84,14 +84,14 @@ class SimDAL_ProxyGenerator {
 		/* @var $descendents SimDAL_Mapper_Descendent */
 		foreach ($descendents as $descendent) {
 			if ($descendent->getType() === SimDAL_Mapper_Descendent::TYPE_NORMAL) {
-				$descendent_class = self::_generateProxyClass($mapping, $prefix . $descendent->getClass());
+				$descendent_class = self::_generateProxyClass($mapping, $descendent->getClass());
 				$descendent_class .= $helper_properties;
 				$descendent_class .= $helper_methods;
 				$descendent_class .= $proxy_methods;
 				$descendent_class .= '}' . PHP_EOL . PHP_EOL;
 				
 				$proxy_class_filename = str_replace('_', '/', $class_name);
-				$descendent_filename = str_replace('_', '/', $prefix . $descendent->getClass());
+				$descendent_filename = str_replace('_', '/', $descendent->getClass());
 				$descendent_proxy_file = preg_replace('/'.preg_quote($proxy_class_filename, '/').'/', $descendent_filename, $proxy_file);
 				$dirname = dirname($descendent_proxy_file);
 				
@@ -194,6 +194,9 @@ class SimDAL_ProxyGenerator {
 				}
 			} else if ($association->getType() == 'one-to-many') {
 				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
+				$output .= '				if (!$reference instanceof SimDAL_Persistence_Collection) {' . PHP_EOL;
+				$output .= '					$this->' . $getter . '();' . PHP_EOL;
+				$output .= '				}' . PHP_EOL;
 			}
 			$output .= '				$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
 			$output .= '			}' . PHP_EOL;

@@ -210,14 +210,14 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	  if (!isset($row[$column])) {
 	  	throw new Exception('\''.$type_field.'\' not defined in descendent');
 	  }
-	  $prefix = $this->getDescendentPrefix();
-	  $class = preg_replace('/ /', '', ucwords(strtolower($row[$column])));
 	  
-	  if (isset($this->_descendents[$class])) {
-	    return $prefix . $class;
+	  if (!isset($this->_descendents[$row[$column]])) {
+	  	return $this->getClass();
 	  }
 	  
-	  return $this->getClass();
+	  $descendent = $this->_descendents[$row[$column]];
+	  
+	  return $descendent->getClass();
 	}
 	
 	public function getDescendentPrefix() {
@@ -282,9 +282,9 @@ class SimDAL_Mapper_Entity implements Countable, ArrayAccess, Iterator {
 	protected function _setupDescendents() {
 	  $descendents = $this->_descendents;
 	  $this->_descendents = array();
-	  foreach ($descendents as $class=>$descendent_data) {
-	    $descendent = new SimDAL_Mapper_Descendent($this, $class, $descendent_data);
-	    $this->_descendents[$descendent->getIdentifier()] = $descendent;
+	  foreach ($descendents as $type=>$descendent_data) {
+	    $descendent = new SimDAL_Mapper_Descendent($this, $type, $descendent_data);
+	    $this->_descendents[$type] = $descendent;
 	  }
 	}
 	

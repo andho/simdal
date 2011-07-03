@@ -732,6 +732,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 		foreach ($mapping->getColumns() as $column) {
 			$property = $column->getProperty();
 			$property_ref = new ReflectionProperty(get_class($entity), $property);
+			$property_ref->setAccessible(true);
 			if ($property_ref->getValue($entity) != $property_ref->getValue($actual)) {
 				$data[$property] = $property_ref->getValue($entity);
 			}

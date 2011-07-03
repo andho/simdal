@@ -38,7 +38,10 @@ class SimDAL_Mapper_Descendent extends SimDAL_Mapper_Entity {
 	  	throw new Exception("Descendent type not given");
 	  }
 	  $this->_type = $data['type'];
+	  
 	  parent::__construct($class, $data, $entity->getMapper());
+	  
+	  $this->_processClass($data);
 	}
 	
 	public function getParentKey() {
@@ -66,6 +69,19 @@ class SimDAL_Mapper_Descendent extends SimDAL_Mapper_Entity {
 	
 	public function getFullClassName() {
 		return $this->getEntity()->getDescendentPrefix() . $this->getClass();
+	}
+	
+	protected function _processClass($data) {
+		$prefix = $this->getEntity()->getDescendentPrefix();
+		
+		$class = $this->getClass();
+		if (isset($data['class'])) {
+			$class = $prefix . $data['class'];
+		} else {
+			$class = $prefix . preg_replace('/ /', '', ucwords(strtolower($class)));
+		}
+		
+		$this->_class = $class;
 	}
 	
 }
