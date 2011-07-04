@@ -146,7 +146,7 @@ class SimDAL_Query {
 			} else {
 				/* @var $join SimDAL_Query_Join_Association */
 				foreach ($this->_join as $join) {
-					if ($join->getMapping()->getClass() == $entity) {
+					if ($join->getIdentifier() == $entity || $join->getMapping()->getClass() == $entity) {
 						$entity = $join->getMapping();
 					}
 				}
@@ -172,17 +172,20 @@ class SimDAL_Query {
 	 */
 	public function join($class) {
 		if (is_string($class)) {
-			$mapping = $this->_getMapper()->getMappingForEntityClass($class);
+			$association = $this->_from->getAssociation($class);
 		}
 		
-		$class = get_class($mapping);
+		if (is_null($association)) {
+			throw new SimDAL_Exception($class . ' is not a valid association for ' . $this->_from->getClass());
+		}
+		
+		$class = get_class($association);
 		
 		switch ($class) {
 			case 'SimDAL_Mapper_Descendent':
 				$join = new SimDAL_Query_Join_Descendent($mapping);
 				break;
-			case 'SimDAL_Mapper_Entity':
-				$association = $this->_from->getAssociation($mapping->getClass());
+			case 'SimDAL_Mapper_Association':
 				$join = new SimDAL_Query_Join_Association($this, $association);
 				if ($association->isParent()) {
 					$join->whereProperty($association->getMapping()->getColumn($association->getParentKey()))

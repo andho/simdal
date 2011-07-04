@@ -36,6 +36,10 @@ class SimDAL_Query_Join_Association extends SimDAL_Query_Join_Abstract {
 		parent::__construct($query, $type, $columns);
 	}
 	
+	public function getIdentifier() {
+		return $this->_association->getIdentifier();
+	}
+	
 	public function getMapping() {
 		return $this->_association->getMatchingAssociationFromAssociationClass()->getMapping();
 	}

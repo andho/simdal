@@ -35,9 +35,9 @@ class SimDAL_Extras_Paginator_Adapter_SimDALQuery implements Zend_Paginator_Adap
 	
 	public function count() {
 		$query = clone($this->_query);
-		$row = $query->count();
+		$count = $query->count();
 		
-		return $row['count'];
+		return $count;
 	}
 	
 	public function getItems($offset, $itemCountPerPage) {
