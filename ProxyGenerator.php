@@ -148,61 +148,60 @@ class SimDAL_ProxyGenerator {
 		$output .= '		if (!is_null($id)) {' . PHP_EOL;
 		$output .= '			$this->id = $id;' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
+		
 		$output .= '		if (!is_array($data) && !is_object($data)) {' . PHP_EOL;
-		$output .= '			return false;' . PHP_EOL;
-		$output .= '		}' . PHP_EOL . PHP_EOL;
-		$output .= '		$this->_session = $session;' . PHP_EOL;
-		$output .= '		if (is_array($data)) {' . PHP_EOL;
-		$output .= '			foreach ($data as $key=>$value) {' . PHP_EOL;
-		$output .= '				if (property_exists($this, $key)) {' . PHP_EOL;
-		$output .= '					$this->$key = $value;' . PHP_EOL;
-		$output .= '				}' . PHP_EOL;
-		$output .= '			}' . PHP_EOL;
-		$output .= '		} else if (is_object($data)) {' . PHP_EOL;
-		
-		foreach ($mapping->getColumns() as $columnName=>$column) {
-			if ($column->isAutoIncrement()) {
-				continue;
-			}
-			$output .= '			if (method_exists($data, \'get' . $columnName . '\')) {' . PHP_EOL;
-			$output .= '				$this->' . $columnName . ' = $data->get' . $columnName . '();' . PHP_EOL;
-			$output .= '			}' . PHP_EOL;
-		}
-		
-		/* @var $association SimDAL_Mapper_Association */
-		foreach ($associations as $association) {
-			$method = ucfirst($association->getMethod());
-			$property = $association->getProperty();
-			$setter = 'set' . $method;
-			$getter = 'get' . $method;
-			$foreignKey = $association->getForeignKey();
-			$parentKey = $association->getParentKey();
-			$parentKeyGetter = 'get' . ucfirst($parentKey);
-			$output .= '			if (method_exists($data, \'' . $getter . '\')) {' . PHP_EOL;
-			$output .= '				$reference = $data->' . $getter . '();' . PHP_EOL;
-			if ($association->getType() == 'many-to-one' || ($association->getType() == 'one-to-one' && $association->isDependent())) {
-				$output .= '				if (!is_null($reference) && !$this->_getSession()->isLoaded($reference) && !$this->_getSession()->isAdded($reference)) {' . PHP_EOL;
-				$output .= '					$this->_getSession()->addEntity($reference);' . PHP_EOL;
-				$output .= '				}' . PHP_EOL;
-			}
-			if ($association->getType() == 'many-to-one' || $association->getType() == 'one-to-one') {
-				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
-				if ($association->isDependent()) {
-					$output .= '				if (!is_null($reference)) {' . PHP_EOL;
-					$output .= '					$this->' . $foreignKey . ' = !is_null($reference)?$reference->' . $parentKeyGetter . '():null;' . PHP_EOL;
-					$output .= '				}' . PHP_EOL;
-				}
-			} else if ($association->getType() == 'one-to-many') {
-				$output .= '				$this->' . $property . ' = $reference;' . PHP_EOL;
-				$output .= '				if (!$reference instanceof SimDAL_Persistence_Collection) {' . PHP_EOL;
-				$output .= '					$this->' . $getter . '();' . PHP_EOL;
-				$output .= '				}' . PHP_EOL;
-			}
-			$output .= '				$this->_SimDALAssociationIsLoaded(\'' . $association->getMethod() . '\');' . PHP_EOL;
-			$output .= '			}' . PHP_EOL;
-		}
-		
+		$output .= '			throw new SimDAL_Exception("Invalid invocation of Proxy with invalid data. Data should be an array or object");' . PHP_EOL;
 		$output .= '		}' . PHP_EOL;
+		
+		$output .= '		$this->_session = $session;' . PHP_EOL;
+		
+		$output .= '		$mapping = $this->_getSession()->getMapper()->getMappingForEntityClass(\'' . $mapping->getClass() . '\');' . PHP_EOL;
+		$output .= '		$columns = $mapping->getColumns();' . PHP_EOL;
+		$output .= '		foreach ($columns as $column) {' . PHP_EOL;
+		$output .= '			if ((is_array($data) && isset($data[$column->getProperty()]))' . PHP_EOL;
+		$output .= '				|| (is_object($data) && property_exists($data, $column->getProperty()))) {' . PHP_EOL;
+		$output .= '				$prop_refl = new ReflectionProperty(\'' . $mapping->getClass() . '\', $column->getProperty());' . PHP_EOL;
+		$output .= '				$prop_refl->setAccessible(true);' . PHP_EOL;
+		$output .= '				if (is_object($data)) {' . PHP_EOL;
+		$output .= '					$value = $prop_refl->getValue($data);' . PHP_EOL;
+		$output .= '				} else {' . PHP_EOL;
+		$output .= '					$value = $data[$column->getProperty()];' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '				$prop_refl->setValue($this, $value);' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		
+		$output .= '		$associations = $mapping->getAssociations();' . PHP_EOL;
+		$output .= '		foreach ($associations as $association) {' . PHP_EOL;
+		$output .= '			if ((is_array($data) && isset($data[$association->getProperty()]))' . PHP_EOL;
+		$output .= '				|| (is_object($data) && property_exists($data, $association->getProperty()))) {' . PHP_EOL;
+		$output .= '				$prop_refl = new ReflectionProperty(\'' . $mapping->getClass() . '\', $association->getProperty());' . PHP_EOL;
+		$output .= '				$prop_refl->setAccessible(true);' . PHP_EOL;
+		$output .= '				if (is_object($data)) {' . PHP_EOL;
+		$output .= '					$value = $prop_refl->getValue($data);' . PHP_EOL;
+		$output .= '				} else {' . PHP_EOL;
+		$output .= '					$value = $data[$association->getProperty()];' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '				if ($association->getType() == \'many-to-one\' || ($association->getType() == \'one-to-one\' && $association->isDependent())) {' . PHP_EOL;
+		$output .= '					if (!is_null($value) && !$this->_getSession()->isLoaded($value) && !$this->_getSession()->isAdded($value)) {' . PHP_EOL;
+		$output .= '						$this->_getSession()->addEntity($value);' . PHP_EOL;
+		$output .= '					}' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '				if ($association->isDependent()) {' . PHP_EOL;
+		$output .= '					$foreign_key = $association->getForeignKey();' . PHP_EOL;
+		$output .= '					$foreign_key_refl = new ReflectionProperty(\'' . $mapping->getClass() . '\', $foreign_key);' . PHP_EOL;
+		$output .= '					$foreign_key_refl->setAccessible(true);' . PHP_EOL;
+		$output .= '					$foreign_key_refl->setValue($this, $value);' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '				if ($association->isOneToMany()) {' . PHP_EOL;
+		$output .= '					$method = \'get\' . $association->getMethod();' . PHP_EOL;
+		$output .= '					$this->$method();' . PHP_EOL;
+		$output .= '				}' . PHP_EOL;
+		$output .= '				$prop_refl->setValue($this, $value);' . PHP_EOL;
+		$output .= '				$this->_SimDALAssociationIsLoaded($association->getMethod());' . PHP_EOL;
+		$output .= '			}' . PHP_EOL;
+		$output .= '		}' . PHP_EOL;
+		
 		$output .= '	}' . PHP_EOL . PHP_EOL;
 		
 		$output .= '	public function __destruct() {' . PHP_EOL;

@@ -86,8 +86,12 @@ class SimDAL_Mapper_Association {
 	
 	public function getParentKey() {
 		if ($this->_parentKey == 'delayed') {
-			$association_entity = $this->getAssociationEntity ();
-			$this->_parentKey = $association_entity->getPrimaryKey ();
+			if ($this->isOneToMany() || $this->isOneToOne() && $this->isDependent()) {
+				$association_entity = $this->getAssociationEntity ();
+				$this->_parentKey = $association_entity->getPrimaryKey ();
+			} else {
+				$this->_parentKey = $this->getMapping()->getPrimaryKey();
+			}
 		}
 		
 		return $this->_parentKey;
