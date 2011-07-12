@@ -36,6 +36,10 @@ abstract class SimDAL_Persistence_PDO_PDOAbstract extends SimDAL_Persistence_DBA
 		
 		$stmnt->closeCursor();
 		
+		if ($row === false) {
+			return null;
+		}
+		
 		return $row;
 	}
 	
