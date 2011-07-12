@@ -96,7 +96,7 @@ class SimDAL_Persistence_PDO_MySqlAdapter extends SimDAL_Persistence_PDO_PDOAbst
 			}
 		}
 		
-		if (!$stmnt->execute()) {
+		if ($stmnt->execute() === false) {
 			throw new SimDAL_Persistence_AdapterException($this, "DB error");
 		}
 		
