@@ -24,18 +24,16 @@
 class SimDAL_Query_Where_Column implements SimDAL_Query_Where_Interface {
 	
 	protected $_query;
-	protected $_entity;
 	protected $_column;
 	protected $_value;
 	protected $_comparison = '=';
 	
-	public function __construct(SimDAL_Mapper_Entity $entity, SimDAL_Mapper_Column $column, SimDAL_Query $query) {
+	public function __construct($column, SimDAL_Query $query) {
 		$this->_query = $query;
-		$this->_entity = $entity;
 		$this->_column = $column;
 	}
 	
-	public function __call($method, $args) {
+	public function __call($method, $args=array()) {
 		if (method_exists($this->_query, $method)) {
 			return call_user_func_array(array($this->_query, $method), $args);
 		}

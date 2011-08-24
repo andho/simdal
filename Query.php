@@ -47,11 +47,9 @@ class SimDAL_Query {
 	 * @param SimDAL_Query_ParentInterface $parent A parent object of which the execute function will be called. Object must implement SimDAL_Query_ParentInterface
 	 * @param String $type Type of query to create. Options are 'select', 'update' and 'delete'
 	 */
-	public function __construct(SimDAL_Query_ParentInterface $parent=null, $type=SimDAL_Query::TYPE_SELECT, SimDAL_Mapper $mapper) {
+	public function __construct(SimDAL_Query_ParentInterface $parent=null) {
 		$this->_parent = $parent;
-		$this->_type = $type;
 		$this->_limit = new SimDAL_Query_Limit(1, 0, $this);
-		$this->_mapper = $mapper;
 	}
 	
 	public function __destruct() {
@@ -71,17 +69,9 @@ class SimDAL_Query {
 	 * @param array $columns
 	 * @return SimDAL_Query
 	 */
-	public function from(SimDAL_Mapper_Entity $entity, array $columns = array()) {
-		if (is_string($entity)) {
-			$entity = $this->_getMapper()->getMappingForEntityClass($entity);
-		} else if (!$entity instanceof SimDAL_Mapper_Entity) {
-			if (is_object($entity)) {
-				$type = get_class($entity);
-			}
-			throw new Exception("Argument 1 passed to SimDAL_Query::from should be an instance of SimDAL_Mapper_Entity or string, '" . $type . "' given");
-		}
+	public function from($from, array $columns = array()) {
 	    $this->_columns = $columns;
-		$this->_from = $entity;
+		$this->_from = $from;
 		
 		return $this;
 	}
@@ -135,31 +125,7 @@ class SimDAL_Query {
 	}
 	
 	public function whereProperty($property, $entity=null) {
-		if ($property instanceof SimDAL_Mapper_Column) {
-			$column = $property;
-			$entity = $property->getEntity();
-		} else {
-			if (is_null($entity)) {
-				$entity = $this->_from;
-			} else if ($this->_from->getClass() == $entity) {
-				$entity = $this->_from;
-			} else {
-				/* @var $join SimDAL_Query_Join_Association */
-				foreach ($this->_join as $join) {
-					if ($join->getIdentifier() == $entity || $join->getMapping()->getClass() == $entity) {
-						$entity = $join->getMapping();
-					}
-				}
-			}
-			/* @var $entity SimDAL_Mapper_Entity */
-			$column = $entity->getColumn($property);
-		}
-		
-		if (!$column) {
-			throw new Exception("Property '$property' does not exist in Entity '" . $entity->getClass() . "'");
-		}
-		
-		$where = new SimDAL_Query_Where_Column($entity, $column, $this);
+		$where = new SimDAL_Query_Where_Column($property, $this);
 		$this->_where[] = $where;
 		
 		return $where;
@@ -246,7 +212,7 @@ class SimDAL_Query {
 	 * @return SimDAL_Mapper_Entity
 	 */
 	public function getFrom() {
-		return $this->_from->getTable();
+		return $this->_from;
 	}
 	
 	public function getSchema() {
