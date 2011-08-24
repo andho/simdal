@@ -64,7 +64,7 @@ class SimDAL_Session implements SimDAL_Query_ParentInterface {
 			throw new SimDAL_MapperIsNotSetException();
 		}
 		
-		if (!is_null($db_conf)) {
+		if (!is_null($db_conf) && is_array($db_conf)) {
 			$this->_adapter = $db_conf['class'];
 		}
 		if ($db_conf instanceof SimDAL_Persistence_AdapterAbstract) {

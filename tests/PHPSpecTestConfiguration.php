@@ -1,10 +1,13 @@
 <?php
 
+ini_set('display_errors', 'on');
+
 $projectDir = realpath( dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' ) . DIRECTORY_SEPARATOR;
 
-$simdal_root = $projectDir . 'library';
-$phpspec_root = $projectDir . '..' . DIRECTORY_SEPARATOR . 'PHPSpec';
-$mockery_root = $projectDir . '..' . DIRECTORY_SEPARATOR . 'Mockery';
+$simdal_root = $projectDir;
+$phpspec_root = realpath('../../../../PHPSpec/PHPSpec-1.0.2beta');
+$mockery_root = realpath('../../../../mockery/library');
+
 
 $paths = array(
 	'SimDAL'=>$simdal_root,
@@ -14,27 +17,15 @@ $paths = array(
 
 set_include_path( implode( PATH_SEPARATOR, $paths ) . PATH_SEPARATOR . get_include_path() );
 
-require_once 'PHPSpec.php';
-require_once 'Mockery/Framework.php';
+require_once 'SimDAL/Autoload.php';
 
-class Custom_Autoload
-{
-    public static function autoload($class)
-    {
-        //$path = dirname(dirname(__FILE__));
-        //include $path . '/' . str_replace('_', '/', $class) . '.php';
-        if (preg_match('/^([^ _]*)?(_[^ _]*)*$/', $class, $matches)) {
-        	$file = str_replace('_', '/', $class) . '.php';
-        	/*if (!is_file($file)) {
-        		return false;
-        	}*/
-        	@include $file;
-        	return true;
-        }
-        
-        return false;
-    }
+spl_autoload_register(array('SimDAL_Autoload', 'autoload'));
 
-}
+$domain_dir = realpath('../TestDomain');
+SimDAL_Autoload::setDomainDirectory($domain_dir);
 
-spl_autoload_register(array('Custom_Autoload', 'autoload'));
+require_once 'PHPSpec/Framework.php';
+require_once 'Mockery/Loader.php';
+$loader = new \Mockery\Loader();
+$loader->register();
+

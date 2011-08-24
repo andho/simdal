@@ -1,6 +1,6 @@
-#Fri Feb 18 21:45:51 MVT 2011
+#Mon Jul 18 20:53:04 MVT 2011
 eclipse.preferences.version=1
-include_path=0;/simdal\u00055;com.zend.php.phpunit.CONTAINER
+include_path=0;/simdal\u00052;/phpspec\u00052;/mockery
 phpVersion=php5.3
 useShortTags=true
 use_asp_tags_as_php=false

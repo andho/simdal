@@ -74,6 +74,7 @@ class SimDAL_Autoload {
         
         if (preg_match('/^([^ _]*)?(_[^ _]*)*$/', $class, $matches)) {
 	        $class_file = str_replace('_', '/', $class);
+	        //$class_file = str_replace("\\", '/', $class_file);
 	        if (preg_match('/SimDALProxy$/', $class_file)) {
 	        	$class_file = preg_replace('/SimDALProxy/', '', $class_file);
 	        	if (is_file(self::getProxyDirectory() . DIRECTORY_SEPARATOR . $class_file . '.inc')) {
